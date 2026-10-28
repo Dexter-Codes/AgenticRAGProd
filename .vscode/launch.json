@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "AgenticRAGProd.Api: Debug",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build API (Debug)",
+      "program": "${workspaceFolder}/src/AgenticRAGProd.Api/bin/Debug/net10.0/AgenticRAGProd.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/AgenticRAGProd.Api",
+      "launchSettingsProfile": null,
+      "stopAtEntry": false,
+      "console": "internalConsole",
+      "justMyCode": true,
+      "requireExactSource": true,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5080"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger"
+      }
+    },
+    {
+      "name": "AgenticRAGProd.Api: Attach",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": true,
+      "requireExactSource": true
+    }
+  ]
+}

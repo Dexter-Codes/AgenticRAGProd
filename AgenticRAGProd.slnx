@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AgenticRAGProd.Api/AgenticRAGProd.Api.csproj" />
+    <Project Path="src/AgenticRAGProd.Application/AgenticRAGProd.Application.csproj" />
+    <Project Path="src/AgenticRAGProd.Infrastructure/AgenticRAGProd.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AgenticRAGProd.Tests/AgenticRAGProd.Tests.csproj" />
+  </Folder>
+</Solution>
