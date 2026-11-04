@@ -1,9 +1,8 @@
-using System.Text.Json;
 using Azure;
 using Azure.AI.OpenAI;
 using Azure.Search.Documents;
 using Azure.Storage.Blobs;
-using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -160,35 +159,14 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Keep the DI graph valid even when chat is disabled, but require Cosmos
-        // credentials at startup only when its Development routes are enabled.
-        // CosmosClient is lazy and its constructor provisions nothing.
-        var cosmosOptions = services.AddOptions<CosmosDbOptions>()
-            .Bind(configuration.GetSection(CosmosDbOptions.SectionName))
-            .ValidateDataAnnotations();
-        if (configuration.GetValue<bool>("Chat:LocalSingleUserMode"))
-            cosmosOptions.ValidateOnStart();
+        services.AddOptions<SqliteOptions>()
+            .Bind(configuration.GetSection(SqliteOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
-        services.AddSingleton<CosmosClient>(serviceProvider =>
-        {
-            var settings = serviceProvider
-                .GetRequiredService<IOptions<CosmosDbOptions>>()
-                .Value;
-
-            return new CosmosClient(
-                settings.ConnectionString,
-                new CosmosClientOptions
-                {
-                    ApplicationName = "AgenticRAGProd",
-                    ConnectionMode = ConnectionMode.Gateway,
-                    RequestTimeout = TimeSpan.FromSeconds(
-                        settings.RequestTimeoutSeconds),
-                    UseSystemTextJsonSerializerWithOptions =
-                        new JsonSerializerOptions(JsonSerializerDefaults.Web)
-                });
-        });
-
-        services.AddScoped<IConversationStore, CosmosConversationStore>();
+        services.AddSingleton<IConversationStore>(provider => new SqliteConversationStore(
+            provider.GetRequiredService<IOptions<SqliteOptions>>(),
+            provider.GetService<IHostEnvironment>()?.ContentRootPath));
 
         return services;
     }

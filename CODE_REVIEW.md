@@ -1,3 +1,5 @@
+> Persistence update (2026-11-02): SQLite has replaced Cosmos DB. The Cosmos findings below describe the earlier implementation; current setup is in [CHAT.md](CHAT.md#sqlite-configuration).
+
 # Code review and cleanup — 2026-10-27
 
 Reviewed the runtime paths for PDF upload, document indexing, hybrid corpus retrieval, query preparation, answer generation and Cosmos message persistence. Chatbot memory changes remain deferred. The three supported endpoints and their JSON/form contracts are preserved.

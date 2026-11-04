@@ -1,17 +1,19 @@
 # AgenticRAGProd
 
-.NET 10 Minimal API for PDF upload, document indexing and persistent corpus chat. Uses Azure Blob Storage, Azure OpenAI, Azure AI Search, Semantic Kernel and Cosmos DB.
+.NET 10 Minimal API for PDF upload, document indexing and persistent corpus chat. Uses Azure Blob Storage, Azure OpenAI, Azure AI Search, Semantic Kernel and SQLite for chat persistence.
 
 ## Run locally
 
-Configure the existing Azure endpoints, deployment/index names and credentials through User Secrets or environment variables. Keep credentials out of source files. Chat currently persists completed exchanges only in the existing `chat` container. Source storage is temporarily disabled because no RU budget is allocated for it; numbered sources remain in each immediate response. The existing chat history indexing policy is still required, as described in [CHAT.md](CHAT.md#manual-container-setup). The application does not provision resources.
+Chat persistence uses a local SQLite file and requires no Cosmos account or credentials. On first use, the API creates `App_Data/chat.db` under its content root, along with the message table and history index. Override the location with an absolute `Sqlite__DatabasePath` environment variable. Existing Cosmos conversations are not imported automatically.
+
+The other services still use Azure: Blob Storage for PDFs, AI Search for retrieval, and Azure OpenAI for embeddings and model answers. Configure working endpoints, deployment/index names and credentials through User Secrets or environment variables. SQLite alone does not make the full RAG workflow run without an Azure subscription.
 
 ```sh
 dotnet restore AgenticRAGProd.slnx -p:NuGetAudit=false
 DOTNET_ENVIRONMENT=Development ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/AgenticRAGProd.Api --no-launch-profile --urls http://localhost:5080
 ```
 
-Open [Swagger UI](http://localhost:5080/swagger) or its [OpenAPI document](http://localhost:5080/swagger/v1/swagger.json). Swagger is available in Development. Upload, indexing and chat use the configured Azure services and may incur charges; browsing Swagger does not call the models.
+Open the [API workbench](http://localhost:5080/) to upload a PDF, index it, and chat with the indexed corpus. The page carries document and conversation IDs between requests, displays sources and extraction notes, and includes a raw request/response inspector. It is served from `wwwroot/index.html` in Development only and makes no API requests until you submit. Swagger remains available at [Swagger UI](http://localhost:5080/swagger) and the [OpenAPI document](http://localhost:5080/swagger/v1/swagger.json). Upload, indexing and chat use the configured Azure services and may incur charges; browsing Swagger does not call the models.
 
 Chat is available only in Development with `Chat:LocalSingleUserMode=true`. Keep this local demonstration on localhost; it has no authentication or document authorization. `POST /api/chat` accepts `{"conversationId":null,"query":"..."}` for a new conversation. Subsequent requests supply the returned conversation ID. Every submission creates a new message; sending a null conversation ID creates a new conversation.
 
@@ -25,17 +27,17 @@ The three workflow endpoints are mapped directly in `Program.cs`:
 
 Upload and indexing are independent of the chat local-mode switch, preserving their existing availability. Index provisioning, document questions, diagnostics, health and history endpoints remain removed. The configured Blob container and Azure AI Search index must already exist; the API does not provision them. Upload does not automatically index the PDF: complete indexing before asking chat about it.
 
-[CHAT.md](CHAT.md) documents the chat contract, query optimization, temporary source-storage pause, persisted history, container setup, legacy migration and reliability limits.
+[CHAT.md](CHAT.md) documents the chat contract, query optimization, temporary source-storage pause, persisted history, SQLite setup, previous data and reliability limits.
 
 ## Debug in VS Code
 
-Open this repository folder in VS Code with the recommended **C#** and **C# Dev Kit** extensions. In **Run and Debug**, select **AgenticRAGProd.Api: Debug** and press **F5**. The launch builds the API in Debug mode, uses the API project directory and Development environment, and opens [Swagger](http://localhost:5080/swagger) when the server is ready. Existing User Secrets remain in use; keep credentials out of `.vscode` files.
+Open this repository folder in VS Code with the recommended **C#** and **C# Dev Kit** extensions. In **Run and Debug**, select **AgenticRAGProd.Api: Debug** and press **F5**. The launch builds the API in Debug mode, uses the API project directory and Development environment, and opens the [API workbench](http://localhost:5080/) when the server is ready. Existing User Secrets remain in use; keep credentials out of `.vscode` files.
 
-Useful breakpoint locations are `ChatService.SendAsync` for request validation/history, `ChatAnswerService.AnswerAsync` for retrieval and generation, and `CosmosConversationStore.SaveAsync` for the message write. **F9** toggles a breakpoint, **F10** steps over, **F11** steps into, **F5** continues and **Shift+F5** stops debugging. The Debug Console shows application output.
+Useful breakpoint locations are `ChatService.SendAsync` for request validation/history, `ChatAnswerService.AnswerAsync` for retrieval and generation, and `SqliteConversationStore.SaveAsync` for the message write. **F9** toggles a breakpoint, **F10** steps over, **F11** steps into, **F5** continues and **Shift+F5** stops debugging. The Debug Console shows application output.
 
 If port `5080` is already in use, stop your earlier API process or select **AgenticRAGProd.Api: Attach** and choose the existing `AgenticRAGProd.Api` process. To inspect the original exception behind a `503`, optionally enable breaking on thrown CLR exceptions in **Run and Debug → Breakpoints**; the endpoint filter otherwise catches that exception and returns a safe response.
 
-Debugging retains the source-storage pause and the existing Cosmos history-index requirement. Sending a real chat question still invokes the configured Azure services; opening Swagger does not invoke the models.
+Debugging uses the local SQLite message database. Sending a real chat question still invokes the configured Azure services; opening Swagger does not invoke the models.
 
 Verified on 2026-10-27: the F5 build and managed launch succeeded, the breakpoint in `ChatService.SendAsync` paused with request locals and the managed call stack visible, and execution resumed successfully. A blank-query request returned the expected `400` before embedding, retrieval, generation or chat storage, and the Swagger document returned `200`. No model calls or chat writes were made for this debugger check.
 
@@ -93,13 +95,13 @@ The following optional settings retain the defaults shown:
 }
 ```
 
-`MaxTokens` is 128–2048. `OverlapTokens` is 0–256 and must be less than half the chunk budget. Search counts are 1–1000, with `FinalContextCount` no greater than `CandidateCount`. Candidate count controls vector neighbors and requested hybrid results; final context count limits returned passages. These settings do not change retrieval scope or cap Azure's internal lexical scoring work. Query optimization uses the existing model deployment and search index; it requires no new Azure resource, index migration or reindexing. Chat history/evidence budgets and Cosmos settings are described in [CHAT.md](CHAT.md#manual-container-setup).
+`MaxTokens` is 128–2048. `OverlapTokens` is 0–256 and must be less than half the chunk budget. Search counts are 1–1000, with `FinalContextCount` no greater than `CandidateCount`. Candidate count controls vector neighbors and requested hybrid results; final context count limits returned passages. These settings do not change retrieval scope or cap Azure's internal lexical scoring work. Query optimization uses the existing model deployment and search index; it requires no new Azure resource, index migration or reindexing. Chat history/evidence budgets and SQLite settings are described in [CHAT.md](CHAT.md#sqlite-configuration).
 
 ## Existing search indexes
 
 The existing Azure AI Search index must contain `id` (key), filterable `documentId`, `documentName`, `pageNumber`, searchable `content`, `hasUnprocessedImages`, and `contentVector` with the configured embedding dimensions and HNSW cosine profile. Index creation is an external setup step; there is no unused provisioning service in this API.
 
-No Azure AI Search schema migration is required for passage context: it is stored and embedded in the existing `content` field. Vector dimensions and metric are unchanged. Cosmos container/index setup is separate and documented in [CHAT.md](CHAT.md#manual-container-setup).
+No Azure AI Search schema migration is required for passage context: it is stored and embedded in the existing `content` field. Vector dimensions and metric are unchanged. SQLite creates its own table and history index automatically.
 
 To apply the current extraction/chunking behavior to older documents, call `POST /api/documents/{documentId}/index?documentName=...` with each document's existing ID and name. Reindexing incurs embedding/indexing costs and is never automatic. The indexing service validates all chunks, embeds and uploads replacements, then removes obsolete chunk IDs for that document. Replacement is not atomic. Chunk IDs use document-wide ordinals; refresh external chunk-ID references and result caches after reindexing.
 
@@ -111,9 +113,21 @@ dotnet build AgenticRAGProd.slnx --no-restore -m:1 -nodeReuse:false -p:UseShared
 dotnet test tests/AgenticRAGProd.Tests/AgenticRAGProd.Tests.csproj --no-build --no-restore -m:1 -nodeReuse:false -p:NuGetAudit=false
 ```
 
-Tests use synthetic content, in-memory PDFs, the real tokenizer, mocked Cosmos containers, fake model/embedding services and intercepted Azure SDK transports. They cover parsing, chunking, indexing, retrieval-query preparation, citations, message persistence without source-container calls, immutable writes and API gating. They do not load app secrets or make paid Azure calls. VSTest requires its local communication socket to be permitted. See [CHAT.md](CHAT.md#local-automated-verification) for persistence verification details.
+Tests use synthetic content, in-memory PDFs, the real tokenizer, real temporary SQLite files, fake model/embedding services and intercepted Azure SDK transports. They cover parsing, chunking, indexing, retrieval-query preparation, citations, immutable message persistence, restored history and API gating. They do not load app secrets or make paid Azure calls. VSTest requires its local communication socket to be permitted. See [CHAT.md](CHAT.md#local-automated-verification) for persistence verification details.
 
 The `AgenticRAGProd` rename was verified on 2026-10-28: the solution built with zero warnings and errors, and all 152 tests passed. Project references, assembly identities and VS Code debugger paths use the new names. The existing User Secrets association and Azure resource configuration are retained.
+
+The API workbench was verified on 2026-10-28: the solution built cleanly and all 157 tests passed. Hosting checks cover `/` and `/index.html` in Development and their absence in Production. Desktop/mobile browser checks exercised upload → index → chat, follow-up and new-conversation IDs, sources, validation, error/trace display and safe rendering with a mocked API. A temporary real host also returned the page and OpenAPI document successfully; no Azure-backed operations were executed.
+
+## SQLite migration verification (2026-11-02)
+
+The solution compiled successfully and all 217 automated tests passed. Tests use real temporary SQLite files for persistence and intercepted transports for model adapters. A local API smoke check created the default database, `chat_messages` table and history index in WAL mode. Its history lookup completed successfully and returned the expected `404` for an unknown conversation. That initial storage check wrote no exchanges; the later approved corpus check saved one completed exchange.
+
+Before subscription reactivation, live embedding and answer calls failed with HTTP `401 Unauthorized`, and a real `POST /api/chat` failed during query preparation. After reactivation on 2026-11-02, separate live calls through the production adapters succeeded: embedding returned a valid 1,536-value vector, and Semantic Kernel answer generation returned the requested `OK` response. An approved live corpus chat retry returned HTTP `200`, `answerKind: answered`, and five sources in about 7.6 seconds. Tracing confirmed successful query preparation, embedding, Azure AI Search retrieval, final answer generation and SQLite persistence. A separate SQLite connection verified that the original question and returned answer were saved unchanged, and the exchange remained readable after stopping the API. This verifies one live workflow; overall answer quality was not evaluated. Blob Storage and AI Search remain Azure services. The SQLite migration does not copy old Cosmos records.
+
+## Automated RAG evaluation
+
+See the [evaluation tool guide](tools/AgenticRAGProd.Evaluation/README.md) for dataset validation, offline baseline scoring, explicitly enabled live smoke/full runs, optional judging, report formats and interview reasoning. Default/offline scoring makes no Azure calls and leaves semantic quality unassessed.
 
 ## Limits
 

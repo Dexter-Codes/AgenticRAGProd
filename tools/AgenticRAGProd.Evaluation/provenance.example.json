@@ -1,0 +1,10 @@
+{
+  "answerServiceCommit": "unknown",
+  "answerDeployment": "unknown",
+  "answerModel": "unknown",
+  "embeddingDeployment": "unknown",
+  "indexName": "unknown",
+  "corpusVersion": "unknown",
+  "promptVersion": "unknown",
+  "configurationVersion": "unknown"
+}

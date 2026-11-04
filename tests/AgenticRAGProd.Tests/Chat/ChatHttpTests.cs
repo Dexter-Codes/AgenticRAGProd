@@ -27,7 +27,7 @@ public sealed class ChatHttpTests
     [Fact]
     public async Task HttpChatRestoresHistoryAndProcessesRepeatedQuestionsAfterHostRecreation()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         Guid id;
         string messageId;
         await using (var app = App(h))
@@ -76,12 +76,34 @@ public sealed class ChatHttpTests
         Assert.Equal(3, h.Db.Messages.Count);
     }
 
+    [Theory]
+    [InlineData("answered")]
+    [InlineData("clarification")]
+    [InlineData("insufficient_evidence")]
+    public async Task HttpExposesActualAnswerKindWithoutChangingStoredMessages(string kind)
+    {
+        using var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = kind == "clarification" } };
+        await using var app = App(h);
+        if (kind == "clarification")
+            h.Model.Responses.Enqueue("{\"question\":null,\"retrievalQuestion\":null,\"clarification\":\"Which document do you mean?\"}");
+        else h.Model.Responses.Enqueue(kind == "answered" ? "Supported answer [1]."
+            : AgenticRAGProd.Application.Prompts.PromptConstants.InsufficientEvidenceAnswer);
+        var response = await Request(app, Chat, "POST", query: kind == "clarification" ? "What about that?" : "Question");
+        Assert.Equal(200, response.Status);
+        using var json = JsonDocument.Parse(response.Body);
+        Assert.Equal(kind, json.RootElement.GetProperty("answerKind").GetString());
+        Assert.Equal(kind == "clarification" ? 0 : 1, json.RootElement.GetProperty("sources").GetArrayLength());
+        var stored = Assert.Single(h.Db.Messages);
+        Assert.Equal(6, stored.EnumerateObject().Count());
+        Assert.False(stored.TryGetProperty("answerKind", out _));
+    }
+
     [Fact]
     public async Task OptimizedChatUsesRewrittenSearchAndPersistsOriginalQuestion()
     {
         const string original = "What do the sensor setup instructions say about calibration?";
         const string retrieval = "sensor setup calibration instructions";
-        var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = true } };
+        using var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = true } };
         await using var app = App(h);
         h.Model.Responses.Enqueue(JsonSerializer.Serialize(new
         {
@@ -107,7 +129,7 @@ public sealed class ChatHttpTests
     [Fact]
     public async Task RepeatedInitialQuestionsCreateSeparateConversations()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         await using var app = App(h);
         h.Model.Responses.Enqueue("Generated response [1].");
         h.Model.Responses.Enqueue("Generated response [1].");
@@ -130,7 +152,7 @@ public sealed class ChatHttpTests
     [Fact]
     public async Task HttpContractRejectsUnknownConversationAndInvalidInput()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         await using var app = App(h);
         Assert.Equal(404, (await Request(app, Chat, "POST", Guid.NewGuid(), "Question")).Status);
         Assert.Equal(400, (await Request(app, Chat, "POST", query: " ")).Status);
@@ -144,7 +166,7 @@ public sealed class ChatHttpTests
     [Fact]
     public async Task HttpErrorsNeverExposeProviderExceptionTextOrCreateFalseAnswers()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         await using var app = App(h);
         h.Model.Handler = _ => throw new ArgumentException("SYNTHETIC_PRIVATE_PROVIDER_DETAIL");
         var failure = await Request(app, Chat, "POST", query: "Question");
@@ -156,7 +178,7 @@ public sealed class ChatHttpTests
     [Fact]
     public async Task InvalidGeneratedAnswerReturns502WithoutSavingAnExchange()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         await using var app = App(h);
         h.Model.Responses.Enqueue("An answer without required source citations.");
 
@@ -171,7 +193,7 @@ public sealed class ChatHttpTests
     [Fact]
     public async Task InternalCancellationReturns504WithoutSavingAnExchange()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         await using var app = App(h);
         h.Model.Handler = _ => throw new OperationCanceledException();
 
@@ -184,14 +206,33 @@ public sealed class ChatHttpTests
     }
 
     [Fact]
-    public async Task StorageSetupErrorsAreActionableAndCorrelatedWithoutProviderDetails()
+    public async Task ModelAuthenticationFailureLogsStatusWithoutProviderDetails()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         var logs = new RecordedLogs();
         await using var app = App(h, logs);
-        const string setupMessage = "Verify the configured CosmosDb:ContainerName container has partition key /conversationId.";
+        var response = new Mock<System.ClientModel.Primitives.PipelineResponse>();
+        response.SetupGet(value => value.Status).Returns(401);
+        h.Model.Handler = _ => throw new System.ClientModel.ClientResultException(
+            "SYNTHETIC_PRIVATE_PROVIDER_DETAIL", response.Object, null);
+        var failure = await Request(app, Chat, "POST", query: "Question");
+        Assert.Equal(503, failure.Status);
+        var log = Assert.Single(logs.Messages.Where(message => message.StartsWith("Chat operation failed.", StringComparison.Ordinal)));
+        Assert.Contains("401", log);
+        Assert.Contains("ClientResultException", log);
+        Assert.DoesNotContain("SYNTHETIC_PRIVATE_PROVIDER_DETAIL", log);
+        Assert.DoesNotContain("SYNTHETIC_PRIVATE_PROVIDER_DETAIL", failure.Body);
+    }
+
+    [Fact]
+    public async Task StorageSetupErrorsAreActionableAndCorrelatedWithoutProviderDetails()
+    {
+        using var h = new ChatHarness();
+        var logs = new RecordedLogs();
+        await using var app = App(h, logs);
+        const string setupMessage = "Verify Sqlite:DatabasePath points to a writable local database file.";
         h.Model.Handler = _ => throw new ChatStorageException(setupMessage,
-            new Microsoft.Azure.Cosmos.CosmosException("SYNTHETIC_PRIVATE_PROVIDER_DETAIL", System.Net.HttpStatusCode.NotFound, 0, "test", 0));
+            new Microsoft.Data.Sqlite.SqliteException("SYNTHETIC_PRIVATE_PROVIDER_DETAIL", 14));
         using var activity = new Activity("chat-storage-failure").SetIdFormat(ActivityIdFormat.W3C).Start();
         var failure = await Request(app, Chat, "POST", query: "Question");
         Assert.Equal(503, failure.Status);
@@ -201,8 +242,7 @@ public sealed class ChatHttpTests
         Assert.Equal(activity.Id, body.RootElement.GetProperty("traceId").GetString());
         var log = Assert.Single(logs.Messages.Where(message => message.StartsWith("Chat operation failed.", StringComparison.Ordinal)));
         Assert.Contains(activity.Id!, log);
-        Assert.Contains("CosmosException", log);
-        Assert.Contains("404", log);
+        Assert.Contains("SqliteException", log);
         Assert.DoesNotContain("SYNTHETIC_PRIVATE_PROVIDER_DETAIL", log);
         Assert.DoesNotContain("SYNTHETIC_PRIVATE_PROVIDER_DETAIL", failure.Body);
     }

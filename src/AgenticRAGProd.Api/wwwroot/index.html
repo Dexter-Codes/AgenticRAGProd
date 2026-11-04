@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>AgenticRAGProd · API Workbench</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { --bg:#f5f7fb; --surface:#fff; --ink:#18243a; --muted:#68768c; --line:#e2e7f0; --blue:#345eea; --blue-soft:#edf1ff; --green:#087e61; --red:#bb3945; --radius:16px; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--bg); font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,textarea { font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.5; }
+    button,input,textarea,summary { -webkit-tap-highlight-color:transparent; }
+    :focus-visible { outline:3px solid #8ca5ff; outline-offset:3px; }
+    a { color:var(--blue); }
+    button { transition:background .15s,box-shadow .15s; }
+    h1,h2,h3,p { margin:0; }
+    header { background:var(--surface); border-bottom:1px solid var(--line); }
+    .topbar { max-width:1440px; margin:auto; min-height:80px; padding:16px 36px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand { display:flex; align-items:center; gap:12px; font-size:18px; font-weight:750; letter-spacing:-.5px; }
+    .logo { display:grid; place-items:center; width:38px; height:38px; border-radius:11px; background:var(--ink); color:#fff; }
+    .logo svg { width:23px; height:23px; }
+    .top-meta { display:flex; align-items:center; gap:14px; color:var(--muted); font-size:12px; }
+    .local-tag { background:#e9f6f0; color:var(--green); border-radius:6px; padding:5px 9px; font-size:10px; font-weight:750; letter-spacing:1px; white-space:nowrap; }
+    .origin { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    main { max-width:1440px; margin:auto; padding:30px 36px 20px; }
+    .intro { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px; }
+    .eyebrow { color:var(--blue); font-size:10px; font-weight:750; letter-spacing:1.6px; text-transform:uppercase; margin-bottom:7px; }
+    h1 { font-size:28px; line-height:1.25; letter-spacing:-.9px; margin-bottom:8px; }
+    .muted { color:var(--muted); }
+    .intro-note { color:var(--muted); font-size:12px; text-align:right; }
+    .workspace { display:grid; grid-template-columns:minmax(290px,360px) minmax(0,1fr); gap:22px; align-items:start; }
+    .document-panel { display:grid; gap:18px; }
+    .card { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:0 3px 12px #18243a03; min-width:0; }
+    .step-card { padding:22px; }
+    .section-head { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+    .step { display:grid; place-items:center; flex-shrink:0; width:26px; height:26px; background:var(--blue-soft); color:var(--blue); border-radius:8px; font-size:12px; font-weight:750; }
+    h2 { font-size:15px; font-weight:700; letter-spacing:-.25px; }
+    .endpoint { margin-left:auto; color:#8b96a8; font:10px ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .dropzone { position:relative; display:grid; place-items:center; text-align:center; min-height:155px; padding:20px 14px; border:1px dashed #c6d1e5; border-radius:11px; background:#fafbfe; transition:background .15s,border-color .15s; }
+    .dropzone:hover,.dropzone.dragging { background:var(--blue-soft); border-color:var(--blue); }
+    .dropzone input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+    .dropzone:focus-within { outline:3px solid #8ca5ff; outline-offset:3px; }
+    .upload-icon { color:var(--blue); width:32px; height:32px; margin-bottom:9px; }
+    .drop-title { font-size:13px; font-weight:650; overflow-wrap:anywhere; }
+    .drop-hint { font-size:11px; color:var(--muted); margin-top:5px; }
+    .primary,.secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:9px 15px; border:1px solid transparent; border-radius:8px; font-size:12px; font-weight:650; }
+    .primary { background:var(--blue); color:#fff; }
+    .primary:hover:enabled { background:#264bc9; box-shadow:0 3px 7px #345eea20; }
+    .secondary { background:#fff; color:var(--ink); border-color:var(--line); }
+    .secondary:hover:enabled { background:#f5f7fb; }
+    .full { width:100%; margin-top:14px; }
+    .field { display:grid; gap:6px; margin-top:14px; }
+    label.field-label { font-size:11px; font-weight:650; }
+    input[type=text],textarea { width:100%; min-width:0; border:1px solid #dbe2ee; border-radius:8px; padding:10px 11px; color:var(--ink); background:#fff; }
+    input[type=text] { font-size:12px; }
+    input::placeholder,textarea::placeholder { color:#99a3b3; }
+    input:focus,textarea:focus { border-color:#93a8f7; }
+    input:disabled,textarea:disabled { background:#f7f8fb; color:var(--muted); }
+    .mono { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .help { color:var(--muted); font-size:11px; margin-top:10px; }
+    .feedback { margin-top:11px; font-size:12px; overflow-wrap:anywhere; }
+    .feedback[data-tone=error] { color:var(--red); }
+    .feedback[data-tone=success] { color:var(--green); }
+    .feedback:empty { display:none; }
+    .stats { display:flex; gap:9px; margin-top:14px; }
+    .stat { flex:1; padding:10px 8px; text-align:center; background:#f6f8fc; border-radius:8px; }
+    .stat strong { display:block; font-size:19px; letter-spacing:-.5px; }
+    .stat span { color:var(--muted); font-size:10px; }
+    .warning { color:#886117; background:#fff8e8; padding:10px; border-radius:8px; margin-top:10px; font-size:11px; }
+    .warning ul { margin:5px 0 0; padding-left:17px; }
+    .chat-card { overflow:hidden; }
+    .chat-heading { padding:21px 24px 16px; border-bottom:1px solid var(--line); }
+    .chat-heading .section-head { margin-bottom:3px; }
+    .chat-heading .muted { margin-left:36px; font-size:12px; }
+    .conversation { padding:13px 24px; display:flex; gap:12px; align-items:flex-end; border-bottom:1px solid var(--line); background:#fcfdff; }
+    .conversation .field { flex:1; min-width:0; margin:0; }
+    .conversation input { padding:8px 10px; font-size:11px; min-height:36px; }
+    .conversation .secondary { min-height:36px; padding:8px 11px; white-space:nowrap; font-size:11px; }
+    .transcript { min-height:340px; height:clamp(340px,45vh,540px); overflow:auto; padding:22px 24px; scroll-behavior:smooth; }
+    .empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:295px; text-align:center; }
+    .empty-icon { display:grid; place-items:center; width:56px; height:56px; border:1px solid var(--line); border-radius:17px; color:var(--blue); background:#f8faff; margin-bottom:17px; }
+    .empty-icon svg { width:25px; height:25px; }
+    .empty h3 { font-size:18px; font-weight:650; letter-spacing:-.4px; margin-bottom:7px; }
+    .empty p { max-width:330px; font-size:12px; color:var(--muted); }
+    .empty-steps { display:flex; align-items:center; gap:8px; color:#8a96aa; font-size:10px; margin-top:23px; }
+    .empty-steps span { padding:5px 9px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+    .message { margin-bottom:20px; overflow-wrap:anywhere; }
+    .message-label { font-size:10px; font-weight:750; color:var(--muted); letter-spacing:.7px; text-transform:uppercase; margin-bottom:6px; }
+    .message.user { display:flex; flex-direction:column; align-items:flex-end; }
+    .message.user .bubble { background:var(--blue-soft); max-width:90%; padding:11px 15px; border-radius:11px 11px 3px 11px; }
+    .bubble { white-space:pre-wrap; line-height:1.75; font-size:13px; }
+    .answer-meta { display:flex; gap:8px; margin-top:10px; font-size:10px; color:var(--muted); }
+    .citation { color:var(--blue); border:0; border-radius:4px; background:var(--blue-soft); font-size:11px; padding:0 5px; min-height:23px; margin:0 2px; }
+    .sources { display:grid; gap:7px; margin-top:14px; }
+    .source { background:#fafbfe; border:1px solid var(--line); border-radius:8px; }
+    .source summary { padding:9px 11px; font-size:11px; font-weight:600; cursor:pointer; overflow-wrap:anywhere; }
+    .source-content { padding:0 11px 12px; }
+    .source-content pre { font-family:inherit; font-size:11px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; margin:9px 0 0; max-height:260px; overflow:auto; }
+    .source-path { font-size:10px; color:var(--muted); }
+    .error-box { padding:12px 14px; background:#fff1f2; border:1px solid #f2d4d8; border-radius:9px; font-size:12px; color:#9c2b38; }
+    .pending { display:flex; align-items:center; gap:9px; font-size:12px; color:var(--muted); padding:6px 0 15px; }
+    .spinner { width:14px; height:14px; border:2px solid #d4ddfb; border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .composer { padding:16px 20px 13px; border-top:1px solid var(--line); }
+    .composer-box { display:flex; align-items:flex-end; gap:12px; border:1px solid #d6deec; border-radius:10px; padding:10px; background:#fff; }
+    .composer-box:focus-within { border-color:#93a8f7; box-shadow:0 0 0 3px #345eea0a; }
+    .composer textarea { resize:vertical; min-height:62px; max-height:160px; padding:3px; border:0; font-size:13px; outline:none; background:transparent; }
+    .composer textarea:focus-visible { outline:2px solid #93a8f7; outline-offset:3px; }
+    .composer .primary { flex-shrink:0; min-width:78px; }
+    .composer-meta { display:flex; justify-content:space-between; color:var(--muted); font-size:10px; margin-top:9px; gap:8px; }
+    .inspector { margin-top:22px; overflow:hidden; }
+    .inspector > summary { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:17px 22px; cursor:pointer; font-size:12px; font-weight:650; }
+    .inspector > summary::after { content:'+'; color:var(--muted); font-size:18px; font-weight:400; }
+    .inspector[open] > summary::after { content:'−'; }
+    .inspector-body { border-top:1px solid var(--line); padding:18px 22px 22px; }
+    .request-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .request-tabs button { padding:6px 12px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); font-size:11px; }
+    .request-tabs button[aria-pressed=true] { background:var(--blue-soft); border-color:#d6dfff; color:var(--blue); }
+    .request-status { display:flex; gap:10px; justify-content:space-between; align-items:center; margin:14px 0 10px; min-width:0; }
+    .request-url { font:11px ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .status { font-size:10px; padding:4px 8px; border-radius:5px; background:#f1f4fa; color:var(--muted); white-space:nowrap; }
+    .status[data-tone=success] { color:var(--green); background:#e9f6f0; }
+    .status[data-tone=error] { color:var(--red); background:#fff1f2; }
+    .inspect-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .code-head { display:flex; align-items:center; justify-content:space-between; font-size:10px; font-weight:650; margin-bottom:7px; }
+    .copy { background:none; border:0; color:var(--blue); padding:4px; font-size:10px; }
+    .code { margin:0; padding:13px; background:#f6f8fc; border:1px solid #e8edf5; border-radius:8px; color:#46546d; font:11px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; overflow-wrap:anywhere; max-height:300px; overflow:auto; min-height:65px; }
+    footer { display:flex; justify-content:space-between; gap:12px; margin-top:19px; font-size:10px; color:#8390a5; }
+    .notice { padding:12px 16px; border:1px solid #f0d7a0; border-radius:9px; color:#896011; background:#fff8e8; font-size:12px; margin-bottom:20px; }
+    [hidden] { display:none !important; }
+    @media(max-width:1000px) { .topbar { padding:16px 24px; } main { padding:25px 24px 20px; } .workspace { grid-template-columns:310px minmax(0,1fr); gap:16px; } .step-card { padding:18px; } .chat-heading,.conversation { padding-left:18px; padding-right:18px; } .transcript { padding:20px 18px; } .intro-note { display:none; } }
+    @media(max-width:760px) { .topbar { min-height:70px; padding:14px 18px; } .brand { font-size:16px; } .top-meta .origin { display:none; } main { padding:23px 16px 18px; } h1 { font-size:25px; } .workspace { grid-template-columns:1fr; } .document-panel { grid-template-columns:1fr 1fr; gap:14px; } .chat-heading { padding-top:18px; } .transcript { height:420px; } .inspect-grid { grid-template-columns:1fr; } footer { flex-wrap:wrap; } }
+    @media(max-width:500px) { .document-panel { grid-template-columns:1fr; } .local-tag { font-size:9px; } .logo { width:32px; height:32px; } .brand { gap:9px; } .conversation { align-items:stretch; flex-direction:column; gap:8px; } .conversation .secondary { align-self:flex-end; } .composer { padding:13px; } .composer-box { gap:7px; } .composer .primary { min-width:61px; padding:9px; } .inspector-body { padding:15px; } .request-status { align-items:flex-start; } .request-url { max-width:70%; } .composer-meta { font-size:9px; } }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></span>AgenticRAGProd</div>
+      <div class="top-meta"><span class="origin" id="origin"></span><span class="local-tag">LOCAL WORKBENCH</span></div>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <div><p class="eyebrow">Your RAG pipeline, in one place</p><h1>Upload, index, and ask.</h1><p class="muted">Prepare your documents and test answers with their supporting sources.</p></div>
+      <p class="intro-note">PDF ingestion → Azure AI Search → grounded chat</p>
+    </div>
+    <div id="file-notice" class="notice" hidden>Open this page through the running API, for example <strong>http://localhost:5080/</strong>, so requests reach the same server.</div>
+    <noscript><p class="notice">Enable JavaScript to use the API workbench.</p></noscript>
+    <div class="workspace">
+      <aside class="document-panel" aria-label="Document preparation">
+        <section class="card step-card">
+          <div class="section-head"><span class="step">1</span><h2>Upload a document</h2><span class="endpoint">POST</span></div>
+          <form id="upload-form">
+            <label class="dropzone" id="dropzone">
+              <input id="pdf-file" type="file" accept=".pdf,application/pdf" aria-label="Choose a PDF to upload" aria-describedby="file-hint upload-feedback">
+              <svg class="upload-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M19 4H9a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10l-6-6Z"/><path d="M18 4v7h7M16 23V14m-4 4 4-4 4 4"/></svg>
+              <div class="drop-title" id="file-title">Drop a PDF here or browse</div>
+              <div class="drop-hint" id="file-hint">PDF files · up to 10 MB</div>
+            </label>
+            <button class="primary full" id="upload-button" type="submit" disabled>Upload PDF</button>
+            <p class="feedback" id="upload-feedback" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+        <section class="card step-card">
+          <div class="section-head"><span class="step">2</span><h2>Index your document</h2><span class="endpoint">POST</span></div>
+          <p class="muted" style="font-size:12px">Turn the uploaded PDF into searchable passages.</p>
+          <form id="index-form">
+            <div class="field"><label class="field-label" for="document-id">Document ID</label><input class="mono" id="document-id" type="text" autocomplete="off" spellcheck="false" placeholder="Filled after upload, or paste an existing ID" aria-describedby="index-feedback"></div>
+            <div class="field"><label class="field-label" for="document-name">Document name</label><input id="document-name" type="text" maxlength="255" autocomplete="off" placeholder="e.g. product-guide.pdf"></div>
+            <button class="primary full" id="index-button" type="submit" disabled>Index document</button>
+            <p class="feedback" id="index-feedback" role="status" aria-live="polite"></p>
+          </form>
+          <div class="stats" id="index-stats" hidden><div class="stat"><strong id="page-count">0</strong><span>Pages</span></div><div class="stat"><strong id="chunk-count">0</strong><span>Chunks indexed</span></div><div class="stat"><strong id="token-count">0</strong><span>Max chunk tokens</span></div></div>
+          <div class="warning" id="index-warnings" hidden></div>
+          <p class="help">Indexing can take a moment. Once it completes, ask a question in chat.</p>
+        </section>
+      </aside>
+      <section class="card chat-card" aria-labelledby="chat-title">
+        <div class="chat-heading"><div class="section-head"><span class="step">3</span><h2 id="chat-title">Chat with your documents</h2></div><p class="muted">Answers use the full indexed corpus.</p></div>
+        <div class="conversation">
+          <div class="field"><label class="field-label" for="conversation-id">Conversation ID <span class="muted" style="font-weight:400">· optional to resume</span></label><input class="mono" id="conversation-id" type="text" autocomplete="off" spellcheck="false" placeholder="Created automatically on your first message"></div>
+          <button class="secondary" id="new-conversation" type="button">＋ New conversation</button>
+        </div>
+        <div class="transcript" id="transcript" role="log" aria-label="Chat messages" aria-live="polite" aria-relevant="additions">
+          <div class="empty" id="chat-empty"><div class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-9l-5 3v-3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h7"/></svg></div><h3>Your documents have answers.</h3><p>Upload and index a PDF, then ask a question. You can also ask about documents already indexed.</p><div class="empty-steps" aria-hidden="true"><span>Upload</span>→<span>Index</span>→<span>Ask</span></div></div>
+        </div>
+        <form class="composer" id="chat-form">
+          <label class="field-label" for="query" style="display:block;margin-bottom:8px">Your question</label>
+          <div class="composer-box"><textarea id="query" rows="2" maxlength="2000" placeholder="Ask a question about your documents…" aria-describedby="chat-help chat-feedback"></textarea><button class="primary" id="send-button" type="submit" disabled>Send ↗</button></div>
+          <div class="composer-meta" id="chat-help"><span>Enter to send · Shift + Enter for a new line</span><span id="query-count">0 / 2,000</span></div>
+          <p class="feedback" id="chat-feedback" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </div>
+    <details class="card inspector" id="inspector"><summary>Request &amp; response inspector</summary>
+      <div class="inspector-body">
+        <div class="request-tabs" aria-label="Inspect an API request"><button type="button" data-operation="upload" aria-pressed="true">Upload</button><button type="button" data-operation="index" aria-pressed="false">Index</button><button type="button" data-operation="chat" aria-pressed="false">Chat</button></div>
+        <div class="request-status"><span class="request-url" id="request-url">No upload request yet</span><span class="status" id="request-status">Not run</span></div>
+        <div class="inspect-grid"><div><div class="code-head"><span>REQUEST</span></div><pre class="code" id="request-body">Your request details will appear here.</pre></div><div><div class="code-head"><span>RESPONSE</span><button class="copy" id="copy-response" type="button" disabled>Copy response</button></div><pre class="code" id="response-body">The server response will appear here.</pre></div></div>
+        <p id="copy-feedback" class="feedback" role="status"></p>
+      </div>
+    </details>
+    <footer><span>AgenticRAGProd · Development workbench</span><span>Requests use your configured Azure services. Nothing runs until you submit.</span></footer>
+  </main>
+  <script>
+  (() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const state = { file:null, busy:{upload:false,index:false,chat:false}, requests:{}, inspection:'upload', conversation:'' };
+    const isFilePage = location.protocol === 'file:';
+    const validId = value => typeof value === 'string' && /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value) && !/^0+$/.test(value.replaceAll('-',''));
+    const format = value => typeof value === 'string' ? value : JSON.stringify(value,null,2);
+    const prettyTime = ms => ms < 1000 ? `${Math.round(ms)} ms` : `${(ms/1000).toFixed(1)} s`;
+    $('origin').textContent = isFilePage ? 'Open through the API' : location.host;
+    $('file-notice').hidden = !isFilePage;
+
+    function feedback(id,message,tone='') {
+      $(id).textContent = message;
+      $(id).dataset.tone = tone;
+    }
+    function refresh() {
+      const documentBusy = state.busy.upload || state.busy.index;
+      $('pdf-file').disabled = documentBusy;
+      $('document-id').disabled = documentBusy;
+      $('document-name').disabled = documentBusy;
+      $('upload-button').disabled = isFilePage || !state.file || documentBusy;
+      $('index-button').disabled = isFilePage || documentBusy || !validId($('document-id').value.trim()) || !$('document-name').value.trim() || $('document-name').value.trim().length > 255;
+      $('upload-button').textContent = state.busy.upload ? 'Uploading…' : 'Upload PDF';
+      $('index-button').textContent = state.busy.index ? 'Indexing…' : 'Index document';
+      const conversation = $('conversation-id').value.trim();
+      $('send-button').disabled = isFilePage || state.busy.chat || !$('query').value.trim() || $('query').value.trim().length > 2000 || (conversation !== '' && !validId(conversation));
+      $('send-button').textContent = state.busy.chat ? 'Waiting…' : 'Send ↗';
+      $('new-conversation').disabled = state.busy.chat;
+      $('conversation-id').disabled = state.busy.chat;
+      $('query').disabled = state.busy.chat;
+      $('query-count').textContent = `${$('query').value.length.toLocaleString()} / 2,000`;
+    }
+    function selectFile(file) {
+      if (state.busy.upload || state.busy.index) return;
+      state.file = null;
+      $('file-title').textContent = file?.name || 'Drop a PDF here or browse';
+      $('file-hint').textContent = file ? `${(file.size/1024/1024).toFixed(2)} MB · PDF upload` : 'PDF files · up to 10 MB';
+      if (!file) feedback('upload-feedback','');
+      else if (!/\.pdf$/i.test(file.name)) feedback('upload-feedback','Choose a file with a .pdf extension.','error');
+      else if (!file.size || file.size > 10*1024*1024) feedback('upload-feedback','Choose a non-empty PDF no larger than 10 MB.','error');
+      else { state.file = file; feedback('upload-feedback','Ready to upload.'); }
+      refresh();
+    }
+    $('pdf-file').addEventListener('change',event => selectFile(event.target.files[0]));
+    ['dragenter','dragover'].forEach(name => $('dropzone').addEventListener(name,event => { event.preventDefault(); $('dropzone').classList.add('dragging'); }));
+    ['dragleave','drop'].forEach(name => $('dropzone').addEventListener(name,event => { event.preventDefault(); $('dropzone').classList.remove('dragging'); }));
+    $('dropzone').addEventListener('drop',event => selectFile(event.dataTransfer.files[0]));
+    $('query').addEventListener('input',refresh);
+    ['document-id','document-name'].forEach(id => $(id).addEventListener('input',() => {
+      $('index-stats').hidden = true; $('index-warnings').hidden = true; feedback('index-feedback',''); refresh();
+    }));
+    $('conversation-id').addEventListener('input',() => {
+      const value = $('conversation-id').value.trim();
+      feedback('chat-feedback',value && !validId(value) ? 'Enter a valid conversation ID, or leave it blank for a new conversation.' : '',value && !validId(value) ? 'error' : '');
+      refresh();
+    });
+
+    function showInspection(operation) {
+      state.inspection = operation;
+      document.querySelectorAll('[data-operation]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.operation === operation)));
+      const result = state.requests[operation];
+      $('copy-response').disabled = !result || result.response === undefined;
+      feedback('copy-feedback','');
+      $('request-url').textContent = result ? `POST ${result.url}` : `No ${operation} request yet`;
+      $('request-body').textContent = result ? format(result.request) : 'Your request details will appear here.';
+      $('response-body').textContent = result?.response === undefined ? (result ? 'Waiting for the server…' : 'The server response will appear here.') : format(result.response);
+      $('request-status').textContent = result ? `${result.status}${result.elapsed === undefined ? '' : ' · '+prettyTime(result.elapsed)}` : 'Not run';
+      $('request-status').dataset.tone = result?.tone || '';
+    }
+    document.querySelectorAll('[data-operation]').forEach(button => button.addEventListener('click',() => showInspection(button.dataset.operation)));
+    $('copy-response').addEventListener('click',async () => {
+      try { await navigator.clipboard.writeText($('response-body').textContent); feedback('copy-feedback','Response copied.','success'); }
+      catch { feedback('copy-feedback','Copy is unavailable. You can select and copy the response text.','error'); }
+    });
+    function errorText(data,status) {
+      if (typeof data === 'string' && data.trim()) return data;
+      const parts = [data?.title,data?.detail || data?.error];
+      if (data?.traceId) parts.push(`Trace ID: ${data.traceId}`);
+      const message = parts.filter(Boolean).join('\n');
+      return message || `The server returned HTTP ${status}.`;
+    }
+    async function request(operation,url,options,descriptor) {
+      const started = performance.now();
+      const entry = {url,request:descriptor,status:'Pending'};
+      state.requests[operation] = entry;
+      showInspection(operation);
+      try {
+        const response = await fetch(url,{method:'POST',...options});
+        const text = await response.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
+        Object.assign(entry,{status:`HTTP ${response.status}`,response:data,elapsed:performance.now()-started,tone:response.ok?'success':'error'});
+        if (!response.ok) throw new Error(errorText(data,response.status));
+        return {data,elapsed:entry.elapsed};
+      } catch (error) {
+        if (entry.response === undefined) Object.assign(entry,{status:'Network error',response:{error:error.message || 'The request did not complete.'},elapsed:performance.now()-started,tone:'error'});
+        throw error;
+      } finally { if (state.inspection === operation) showInspection(operation); }
+    }
+    $('upload-form').addEventListener('submit',async event => {
+      event.preventDefault();
+      if ($('upload-button').disabled) return;
+      const file = state.file;
+      const body = new FormData();
+      body.append('file',file);
+      state.busy.upload = true; refresh(); feedback('upload-feedback','Uploading your PDF…');
+      try {
+        const {data,elapsed} = await request('upload','/api/documents',{body},{file:{name:file.name,sizeBytes:file.size,type:file.type || 'application/pdf'}});
+        if (!data || !validId(data.documentId || '')) throw new Error('The upload response did not include a valid document ID. Inspect the response below.');
+        $('document-id').value = data.documentId;
+        $('document-name').value = data.fileName || file.name;
+        $('index-stats').hidden = true; $('index-warnings').hidden = true;
+        feedback('index-feedback','Document ready to index.');
+        feedback('upload-feedback',`Uploaded successfully · ${prettyTime(elapsed)}`,'success');
+      } catch (error) { feedback('upload-feedback',error.message,'error'); $('inspector').open = true; }
+      finally { state.busy.upload = false; refresh(); }
+    });
+    $('index-form').addEventListener('submit',async event => {
+      event.preventDefault();
+      if ($('index-button').disabled) return;
+      const id = $('document-id').value.trim();
+      const name = $('document-name').value.trim();
+      const url = `/api/documents/${encodeURIComponent(id)}/index?${new URLSearchParams({documentName:name})}`;
+      state.busy.index = true; refresh(); feedback('index-feedback','Indexing your document…');
+      $('index-stats').hidden = true; $('index-warnings').hidden = true;
+      try {
+        const {data,elapsed} = await request('index',url,{}, {documentId:id,documentName:name});
+        if (!data || !Number.isInteger(data.indexedChunks)) throw new Error('Unexpected indexing response. Inspect the response below.');
+        $('page-count').textContent = data.pageCount;
+        $('chunk-count').textContent = data.indexedChunks;
+        $('token-count').textContent = data.maximumChunkTokens;
+        $('index-stats').hidden = false;
+        const warnings = [...(Array.isArray(data.warnings)?data.warnings:[])];
+        if (Array.isArray(data.pagesWithUnprocessedImages) && data.pagesWithUnprocessedImages.length) warnings.push(`Unprocessed images on pages ${data.pagesWithUnprocessedImages.join(', ')}.`);
+        const warningBox = $('index-warnings'); warningBox.replaceChildren();
+        if (warnings.length) {
+          warningBox.append(document.createTextNode('Extraction notes'));
+          const list = document.createElement('ul');
+          warnings.forEach(text => { const li = document.createElement('li'); li.textContent = text; list.append(li); });
+          warningBox.append(list); warningBox.hidden = false;
+        }
+        feedback('index-feedback',`Indexed successfully · ${prettyTime(elapsed)}`,'success');
+      } catch (error) { feedback('index-feedback',error.message,'error'); $('inspector').open = true; }
+      finally { state.busy.index = false; refresh(); }
+    });
+
+    const scrollChat = () => { $('transcript').scrollTop = $('transcript').scrollHeight; };
+    function clearTranscript() { $('transcript').querySelectorAll('.message,.pending').forEach(node => node.remove()); $('chat-empty').hidden = false; }
+    function newMessage(label,kind) {
+      $('chat-empty').hidden = true;
+      const message = document.createElement('div'); message.className = `message ${kind}`;
+      const title = document.createElement('div'); title.className = 'message-label'; title.textContent = label;
+      const bubble = document.createElement('div'); bubble.className = 'bubble';
+      message.append(title,bubble); $('transcript').append(message);
+      return {message,bubble};
+    }
+    function renderAnswer(data,elapsed) {
+      const {message,bubble} = newMessage('AgenticRAG','assistant');
+      const sources = Array.isArray(data.sources) ? data.sources : [];
+      const detailsByNumber = new Map();
+      const sourceList = document.createElement('div'); sourceList.className = 'sources';
+      sources.forEach(source => {
+        const details = document.createElement('details'); details.className = 'source';
+        const summary = document.createElement('summary');
+        const context = source.context;
+        const pages = context?.pageEnd > context?.pageStart ? `${context.pageStart}–${context.pageEnd}` : source.pageNumber;
+        summary.textContent = `[${source.number}] ${source.documentName} · p. ${pages}`;
+        const content = document.createElement('div'); content.className = 'source-content';
+        if (context?.sectionPath?.length) { const path = document.createElement('p'); path.className = 'source-path'; path.textContent = context.sectionPath.join(' / '); content.append(path); }
+        const passage = document.createElement('pre'); passage.textContent = source.passage || ''; content.append(passage);
+        const warnings = [...(Array.isArray(context?.warnings)?context.warnings:[])];
+        if (source.hasUnprocessedImages) warnings.push('This source contains unprocessed images.');
+        if (warnings.length) { const note = document.createElement('p'); note.className = 'warning'; note.textContent = warnings.join(' '); content.append(note); }
+        details.append(summary,content); sourceList.append(details); detailsByNumber.set(Number(source.number),details);
+      });
+      const text = data.answer;
+      let position = 0;
+      for (const match of text.matchAll(/\[(\d+)\]/g)) {
+        bubble.append(document.createTextNode(text.slice(position,match.index)));
+        const source = detailsByNumber.get(Number(match[1]));
+        if (source) {
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'citation'; button.textContent = match[0]; button.setAttribute('aria-label',`Open source ${match[1]}`);
+          button.addEventListener('click',() => { source.open = true; source.querySelector('summary').focus(); source.scrollIntoView({block:'nearest'}); });
+          bubble.append(button);
+        } else bubble.append(document.createTextNode(match[0]));
+        position = match.index + match[0].length;
+      }
+      bubble.append(document.createTextNode(text.slice(position)));
+      if (sources.length) message.append(sourceList);
+      const meta = document.createElement('div'); meta.className = 'answer-meta';
+      meta.textContent = `${prettyTime(elapsed)} · ${sources.length} ${sources.length===1?'source':'sources'}${data.messageId?' · Message '+data.messageId.slice(0,8):''}`;
+      message.append(meta); scrollChat();
+    }
+    $('new-conversation').addEventListener('click',() => {
+      if (state.busy.chat) return;
+      state.conversation = ''; $('conversation-id').value = ''; clearTranscript();
+      feedback('chat-feedback','A new conversation will start with your next message.'); refresh(); $('query').focus();
+    });
+    $('query').addEventListener('keydown',event => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('chat-form').requestSubmit(); }
+    });
+    $('chat-form').addEventListener('submit',async event => {
+      event.preventDefault();
+      if ($('send-button').disabled) return;
+      const query = $('query').value.trim();
+      const conversation = $('conversation-id').value.trim();
+      if (conversation !== state.conversation) { clearTranscript(); state.conversation = conversation; }
+      newMessage('You','user').bubble.textContent = query;
+      const pending = document.createElement('div'); pending.className = 'pending';
+      const spinner = document.createElement('span'); spinner.className = 'spinner'; spinner.setAttribute('aria-hidden','true');
+      pending.append(spinner,document.createTextNode('Waiting for the API response…')); $('transcript').append(pending);
+      state.busy.chat = true; feedback('chat-feedback',''); refresh(); scrollChat();
+      try {
+        const body = {conversationId:conversation || null,query};
+        const {data,elapsed} = await request('chat','/api/chat',{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},body);
+        if (!data || typeof data.answer !== 'string' || !validId(data.conversationId || '')) throw new Error('Unexpected chat response. Inspect the response below.');
+        state.conversation = data.conversationId; $('conversation-id').value = data.conversationId;
+        $('query').value = ''; pending.remove(); renderAnswer(data,elapsed);
+        feedback('chat-feedback','Response received.','success');
+      } catch (error) {
+        pending.remove(); $('query').value = query;
+        const box = document.createElement('div'); box.className = 'message error-box'; box.setAttribute('role','alert'); box.textContent = error.message;
+        $('transcript').append(box); feedback('chat-feedback','Request failed. Your question is kept below.','error');
+        $('inspector').open = true; scrollChat();
+      } finally { state.busy.chat = false; refresh(); $('query').focus(); }
+    });
+    refresh();
+  })();
+  </script>
+</body>
+</html>

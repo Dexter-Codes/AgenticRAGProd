@@ -8,7 +8,7 @@ namespace AgenticRAGProd.Application.Conversations;
 
 public sealed partial class ChatAnswerService(
     IAnswerGenerator generator, ITextEmbeddingService embeddings, ICorpusChunkRetriever retriever,
-    ITextTokenCounter tokens, IOptions<ChatOptions> options)
+    ITextTokenCounter tokens, IOptions<ChatOptions> options, ChatTelemetry telemetry)
 {
     public async Task<ChatAnswer> AnswerAsync(string message, IReadOnlyList<ChatMessage> chatHistory,
         CancellationToken cancellationToken, bool earlierHistoryOmitted = false)
@@ -19,25 +19,110 @@ public sealed partial class ChatAnswerService(
         var optimize = options.Value.EnableQueryOptimization;
         if (optimize || completed.Length > 0)
         {
-            var history = BoundHistory(completed);
-            var resolution = await generator.GenerateAsync(optimize
-                    ? PromptConstants.QueryOptimizationInstructions : PromptConstants.QueryResolutionInstructions,
-                JsonSerializer.Serialize(new { message, history, historyIsBounded = true,
-                    historyOmitted = earlierHistoryOmitted || history.Count < completed.Length }), cancellationToken);
-            var resolved = ReadResolution(resolution, optimize);
-            if (resolved.Clarification is not null) return new ChatAnswer(resolved.Clarification, []);
-            // The original first question remains the answer target. Later
-            // questions may need a standalone form to resolve their references.
-            question = completed.Length == 0 ? message.Trim() : resolved.Question!;
-            if (!PreservesLiterals(message, question, allowAdditional: true))
-                throw new ChatGenerationException("Query preparation changed an explicit number or quoted phrase.");
-            retrievalQuestion = optimize && PreservesLiterals(question, resolved.RetrievalQuestion!, allowAdditional: false)
-                ? resolved.RetrievalQuestion! : question;
+            var resolved = await telemetry.MeasureAsync(
+                "chat.query_preparation",
+                async activity =>
+                {
+                    var history = BoundHistory(completed);
+
+                    activity?.SetTag(
+                        "rag.history.included_turns",
+                        history.Count);
+
+                    activity?.SetTag(
+                        "rag.history.omitted",
+                        earlierHistoryOmitted ||
+                        history.Count < completed.Length);
+
+                    activity?.SetTag(
+                        "rag.query.optimization.enabled",
+                        optimize);
+
+                    var instructions = optimize
+                        ? PromptConstants.QueryOptimizationInstructions
+                        : PromptConstants.QueryResolutionInstructions;
+
+                    var input = JsonSerializer.Serialize(new
+                    {
+                        message,
+                        history,
+                        historyIsBounded = true,
+                        historyOmitted =
+                            earlierHistoryOmitted ||
+                            history.Count < completed.Length
+                    });
+
+                    var resolution = await generator.GenerateAsync(
+                        instructions,
+                        input,
+                        cancellationToken);
+
+                    var prepared = ReadResolution(resolution, optimize);
+
+                    if (prepared.Clarification is null)
+                    {
+                        var standaloneQuestion = completed.Length == 0
+                            ? message.Trim()
+                            : prepared.Question!;
+
+                        if (!PreservesLiterals(
+                            message,
+                            standaloneQuestion,
+                            allowAdditional: true))
+                        {
+                            throw new ChatGenerationException(
+                                "Query preparation changed an explicit " +
+                                "number or quoted phrase.");
+                        }
+                    }
+
+                    return prepared;
+                });
+
+           if (resolved.Clarification is not null)
+            {
+                return new ChatAnswer(
+                    resolved.Clarification,
+                    [],
+                    ChatAnswerKind.Clarification);
+            }
+
+            question = completed.Length == 0
+                ? message.Trim()
+                : resolved.Question!;
+
+            retrievalQuestion =
+                optimize &&
+                PreservesLiterals(
+                    question,
+                    resolved.RetrievalQuestion!,
+                    allowAdditional: false)
+                ? resolved.RetrievalQuestion!
+                : question;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var vector = await embeddings.GenerateAsync(retrievalQuestion, cancellationToken);
-        var chunks = await retriever.RetrieveCorpusAsync(retrievalQuestion, vector, cancellationToken);
+        var vector = await telemetry.MeasureAsync(
+        "chat.embedding",
+        () => embeddings.GenerateAsync(
+            retrievalQuestion,
+            cancellationToken));
+
+        var chunks = await telemetry.MeasureAsync(
+        "chat.search",
+        async activity =>
+        {
+            var results = await retriever.RetrieveCorpusAsync(
+                retrievalQuestion,
+                vector,
+                cancellationToken);
+
+            activity?.SetTag(
+                "rag.retrieval.returned_chunks",
+                results.Count);
+
+            return results;
+        });
         var sources = new List<AnswerSource>();
         foreach (var chunk in chunks)
         {
@@ -48,13 +133,51 @@ public sealed partial class ChatAnswerService(
         }
         if (chunks.Count > 0 && sources.Count == 0)
             throw new ChatGenerationException("Retrieved evidence exceeds the configured context budget.");
-        if (sources.Count == 0) return new ChatAnswer(PromptConstants.InsufficientEvidenceAnswer, []);
+
+        if (sources.Count == 0)
+        {
+            return new ChatAnswer(
+                PromptConstants.InsufficientEvidenceAnswer,
+                [],
+                ChatAnswerKind.InsufficientEvidence);
+        }
 
         // No old assistant response or old source passage enters the evidence prompt.
-        var answer = await generator.GenerateAsync(PromptConstants.ChatAnswerInstructions,
-            JsonSerializer.Serialize(new { originalQuestion = message, question, sources }), cancellationToken);
-        ValidateAnswer(answer, sources.Count);
-        return new ChatAnswer(answer, sources);
+       return await telemetry.MeasureAsync(
+            "chat.answer_generation",
+            async activity =>
+            {
+                activity?.SetTag(
+                    "rag.evidence.source_count",
+                    sources.Count);
+
+                var input = JsonSerializer.Serialize(new
+                {
+                    originalQuestion = message,
+                    question,
+                    sources
+                });
+
+                var text = await generator.GenerateAsync(
+                    PromptConstants.ChatAnswerInstructions,
+                    input,
+                    cancellationToken);
+
+                ValidateAnswer(text, sources.Count);
+
+                var kind = string.Equals(
+                    text.Trim(),
+                    PromptConstants.InsufficientEvidenceAnswer,
+                    StringComparison.Ordinal)
+                        ? ChatAnswerKind.InsufficientEvidence
+                        : ChatAnswerKind.Answered;
+
+                activity?.SetTag(
+                    "rag.answer.kind",
+                    ChatTelemetry.AnswerKindTag(kind));
+
+                return new ChatAnswer(text, sources, kind);
+            });
     }
 
     public IReadOnlyList<ChatHistory> BoundHistory(IReadOnlyList<ChatMessage> turns)

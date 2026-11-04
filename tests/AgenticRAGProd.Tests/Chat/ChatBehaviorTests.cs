@@ -10,7 +10,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task NewConversationSavesMessageAndReturnsSourcesWithoutPersistingThem()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("The sensor is described here [1].");
         var first = await h.Service.SendAsync(null, "Question", default);
         Assert.NotEqual(Guid.Empty, first.ConversationId);
@@ -30,7 +30,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task RepeatedQuestionCreatesFreshMessagesInAnExistingConversation()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("First answer [1].");
         var first = await h.Service.SendAsync(null, "Question", default);
         h.Db.Clock.Advance(TimeSpan.FromSeconds(1));
@@ -51,7 +51,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task RepeatedNullConversationSubmissionsCreateSeparateConversations()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("First answer [1].");
         h.Model.Responses.Enqueue("Second answer [1].");
         var first = await h.Service.SendAsync(null, "Question", default);
@@ -65,7 +65,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task NewMessagesKeepEmailAndDistinctIdsAcrossServiceRecreation()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("First answer [1].");
         var first = await h.Service.SendAsync(null, "Initial question", default);
         h.Db.Clock.Advance(TimeSpan.FromSeconds(1));
@@ -84,7 +84,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task FollowupRestoresHistoryOnlyForResolutionAndRetrievesFreshEvidence()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("OLD_ASSISTANT_ASSERTION [1].");
         var first = await h.Service.SendAsync(null, "Tell me about the sensor", default);
         h.Model.Responses.Enqueue("{\"question\":\"How is the sensor calibrated?\",\"clarification\":null}");
@@ -103,7 +103,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task ClarificationPersistsAnswerWithoutDocumentSearchOrSourceStorage()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("Initial answer [1].");
         var first = await h.Service.SendAsync(null, "Initial question", default);
         h.Model.Responses.Enqueue("{\"question\":null,\"clarification\":\"Which sensor do you mean?\"}");
@@ -123,7 +123,7 @@ public sealed class ChatBehaviorTests
     [InlineData("")]
     public async Task InvalidAnswersWriteNothingAndAllowAnotherSubmission(string invalid)
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue(invalid);
         await Assert.ThrowsAsync<ChatGenerationException>(() => h.Service.SendAsync(null, "Question", default));
         Assert.Empty(h.Db.Messages);
@@ -136,7 +136,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task InvalidResolutionCreatesNoFailedRecord()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("Initial answer [1].");
         var first = await h.Service.SendAsync(null, "Initial question", default);
         h.Model.Responses.Enqueue("not JSON");
@@ -148,7 +148,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task EmptyRetrievalReturnsInsufficientWithoutAnswerGeneration()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Retrieval.Chunks = [];
         var result = await h.Service.SendAsync(null, "Question", default);
         Assert.Equal("The supplied document excerpts do not provide enough information.", result.Answer);
@@ -160,7 +160,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task ResubmittingAfterLostResponseCreatesAnotherConversation()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Db.LoseNextMessageResponse = true;
         h.Model.Responses.Enqueue("Saved response [1].");
         await Assert.ThrowsAsync<HttpRequestException>(() => h.Service.SendAsync(null, "Question", default));
@@ -177,10 +177,10 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task MessageWriteFailureLeavesNoSourcesAndAllowsAnotherSubmission()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Db.FailNextMessageCreate = true;
         h.Model.Responses.Enqueue("Unpersisted [1].");
-        await Assert.ThrowsAsync<Microsoft.Azure.Cosmos.CosmosException>(() => h.Service.SendAsync(null, "Question", default));
+        await Assert.ThrowsAsync<ChatStorageException>(() => h.Service.SendAsync(null, "Question", default));
         Assert.Empty(h.Db.Messages);
 
         h.Model.Responses.Enqueue("Recovered [1].");
@@ -192,7 +192,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task CancellationDuringGenerationLeavesNoProcessingRecords()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         using var cts = new CancellationTokenSource();
         h.Model.Handler = _ => { cts.Cancel(); throw new OperationCanceledException(cts.Token); };
         await Assert.ThrowsAsync<OperationCanceledException>(() => h.Service.SendAsync(null, "Question", cts.Token));
@@ -202,7 +202,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public void HistoryBudgetCountsSerializedPairsAndKeepsNewest()
     {
-        var h = new ChatHarness { Options = new ChatOptions { HistoryTokens = 128, HistoryTurns = 3 } };
+        using var h = new ChatHarness { Options = new ChatOptions { HistoryTokens = 128, HistoryTurns = 3 } };
         var id = Guid.NewGuid();
         var turns = Enumerable.Range(1, 8).Select(i => new ChatMessage($"m{i}", id, "test1@gmail.com",
             $"user {i}", $"assistant {i}", DateTimeOffset.UnixEpoch.AddSeconds(i))).Reverse().ToArray();
@@ -216,7 +216,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task ReturnedSourcesAreExactlyTheBoundedModelContextWithContiguousNumbers()
     {
-        var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = false, EvidenceTokens = 512 } };
+        using var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = false, EvidenceTokens = 512 } };
         var docId = Guid.NewGuid();
         h.Retrieval.Chunks =
         [new("too-big", docId, "Guide", 1, string.Concat(Enumerable.Repeat("oversized ", 1000)), false, 1),
@@ -237,7 +237,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task ConcurrentSubmissionsCreateSeparateExchanges()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         var release = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var bothEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var callCount = 0;
@@ -262,7 +262,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task LostResponseExchangeCanBeFoundInHistoryAfterServiceRecreation()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("Initial answer [1].");
         var first = await h.Service.SendAsync(null, "Initial question", default);
         h.Db.Clock.Advance(TimeSpan.FromSeconds(1));
@@ -282,7 +282,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task HistoryTruncationByRecordCountIsReportedToTheResolver()
     {
-        var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = false, HistoryTurns = 1 } };
+        using var h = new ChatHarness { Options = new ChatOptions { EnableQueryOptimization = false, HistoryTurns = 1 } };
         h.Model.Responses.Enqueue("First answer [1].");
         var first = await h.Service.SendAsync(null, "First question", default);
         h.Db.Clock.Advance(TimeSpan.FromSeconds(1));
@@ -300,7 +300,7 @@ public sealed class ChatBehaviorTests
     [Fact]
     public async Task UnknownSuppliedConversationDoesNotGenerateAnAnswer()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         await Assert.ThrowsAsync<ConversationNotFoundException>(() => h.Service.SendAsync(Guid.NewGuid(), "Question", default));
         Assert.Empty(h.Model.Calls);
         Assert.Empty(h.Embeddings.Questions);

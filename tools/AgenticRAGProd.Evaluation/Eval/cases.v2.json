@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 2,
+  "datasetVersion": "rag-eval-v2.0",
+  "description": "Held-out practice benchmark. Only questions/setupTurns may enter the answer pipeline.",
+  "suites": {
+    "smoke": [
+      "case-001",
+      "case-002",
+      "case-003",
+      "case-004",
+      "case-006"
+    ],
+    "full": [
+      "case-001",
+      "case-002",
+      "case-003",
+      "case-004",
+      "case-006",
+      "case-007",
+      "case-008",
+      "case-009",
+      "case-010",
+      "case-011",
+      "case-012",
+      "case-013",
+      "case-014",
+      "case-015",
+      "case-016",
+      "case-017"
+    ]
+  },
+  "cases": [
+    {
+      "id": "case-001",
+      "question": "What is the current Horizon Plus AMB requirement?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "lookup",
+        "version_default"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-002",
+      "question": "Can a salary certificate replace salary slips?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "exception",
+        "qualification"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-003",
+      "question": "What is the Regional Fire Service phone number?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "exact_lookup"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-004",
+      "question": "What about the other one?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "ambiguity"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-005",
+      "question": "Does a non-Premium account guarantee a personal loan? ",
+      "enabled": false,
+      "disabledReason": "Original abstention label is disputed: general loan eligibility rules provide relevant evidence. Keep excluded until a human adjudicates the intended scope.",
+      "tags": [
+        "reference_review"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-006",
+      "question": "According to Banking_RAG_Practice.pdf, what is the card replacement charge?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "abstention",
+        "missing_information"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-007",
+      "question": "According to the banking handbook, what Horizon Plus AMB requirement applies to an application dated 31 October 2026?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "date_boundary",
+        "historical"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-008",
+      "question": "According to the banking handbook, what Horizon Plus AMB requirement applies to an application dated 1 November 2026?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "date_boundary",
+        "current"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-009",
+      "question": "Under banking handbook version 2.0, what is the total monthly Horizon Plus shortfall charge including GST when AMB is below the threshold?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "calculation",
+        "currency",
+        "time_unit"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-010",
+      "question": "Under the current banking handbook schedule, a Horizon Plus customer makes eight domestic ATM withdrawals in one month. What additional withdrawal charge including GST applies?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "calculation",
+        "table_relationship"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-011",
+      "question": "According to the banking handbook, calculate FOIR for LN 204 and explain whether it guarantees final loan approval.",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "calculation",
+        "qualification"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-012",
+      "question": "According to the banking handbook transaction extract, what is the net settled value?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "aggregation",
+        "table_relationship"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-013",
+      "question": "According to the Kestrel Basin manual, how quickly must a rack at Kestrel South be isolated after an A3 alarm?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "site_exception"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-014",
+      "question": "According to the current Kestrel Basin manual, which alarm band contains a KN rack reading exactly 52 degrees Celsius?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "boundary",
+        "table_relationship"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-015",
+      "question": "According to the Kestrel Basin manual, can the Director of Operations override A3 isolation in an emergency?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "authority",
+        "exception_scope"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-016",
+      "question": "According to the Kestrel Basin manual, how many MWh does each rack hold?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "calculation",
+        "units"
+      ],
+      "setupTurns": []
+    },
+    {
+      "id": "case-017",
+      "question": "And what monthly shortfall charge applies if I fall below it, including GST?",
+      "enabled": true,
+      "disabledReason": null,
+      "tags": [
+        "conversation_memory",
+        "calculation"
+      ],
+      "setupTurns": [
+        "According to banking handbook version 2.0, what is the Horizon Plus AMB requirement?"
+      ]
+    },
+    {
+      "id": "case-018",
+      "question": "According to the banking handbook, what is the assisted onboarding charge including GST for Horizon Plus in Bengaluru on 15 November 2026?",
+      "enabled": false,
+      "disabledReason": "OCR/vision extraction is not implemented in the inspected baseline. The image-only notice is not available to the answer model.",
+      "tags": [
+        "ocr_required",
+        "cross_page_exception"
+      ],
+      "setupTurns": []
+    }
+  ]
+}

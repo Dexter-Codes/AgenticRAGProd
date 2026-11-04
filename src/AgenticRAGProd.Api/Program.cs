@@ -6,8 +6,52 @@ using AgenticRAGProd.Application.Abstractions;
 using AgenticRAGProd.Application.Conversations;
 using AgenticRAGProd.Application.Documents;
 using AgenticRAGProd.Infrastructure;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services
+        .AddOpenTelemetry()
+        .ConfigureResource(resource =>
+            resource.AddService(
+                serviceName: "AgenticRAGProd.Api"))
+        .WithTracing(tracing =>
+            tracing
+                .SetSampler(new AlwaysOnSampler())
+                .AddAspNetCoreInstrumentation()
+                .AddSource(ChatTelemetry.ActivitySourceName)
+                .AddConsoleExporter())
+        .WithMetrics(metrics =>
+            metrics
+                .AddMeter(ChatTelemetry.MeterName)
+                .AddAspNetCoreInstrumentation()
+                .AddView(
+                    ChatTelemetry.DurationMetricName,
+                    new ExplicitBucketHistogramConfiguration
+                    {
+                        Boundaries = new double[]
+                        {
+                            0.01, 0.05, 0.1, 0.25, 0.5,
+                            1, 2, 5, 10, 20, 30,
+                            60, 120, 180, 240
+                        }
+                    })
+                .AddConsoleExporter((_, readerOptions) =>
+                {
+                    readerOptions
+                        .PeriodicExportingMetricReaderOptions
+                        .ExportIntervalMilliseconds = 5000;
+                }));
+}
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.UseUtcTimestamp = true;
+    options.TimestampFormat = "O";
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddApiDocumentation();
 builder.Services.AddApplication();
@@ -30,6 +74,11 @@ public partial class Program
             StatusCodeSelector = error => error is BadHttpRequestException requestError
                 ? requestError.StatusCode : StatusCodes.Status500InternalServerError
         });
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+        }
         app.UseApiDocumentation();
 
         #region Document upload and indexing

@@ -30,7 +30,7 @@ public sealed class DocumentHttpTests
     [Fact]
     public async Task UploadedDocumentIsIndexedAndBecomesChatEvidence()
     {
-        var chat = new ChatHarness { Options = new ChatOptions() };
+        using var chat = new ChatHarness { Options = new ChatOptions() };
         var storage = new MemoryStorage();
         var parser = new RecordingParser();
         var index = new MemoryIndex();
@@ -89,7 +89,7 @@ public sealed class DocumentHttpTests
     [InlineData("oversized.pdf", 10 * 1024 * 1024 + 1)]
     public async Task InvalidUploadIsRejectedBeforeStorageOrIndexing(string filename, int length)
     {
-        var chat = new ChatHarness();
+        using var chat = new ChatHarness();
         var storage = new MemoryStorage();
         var parser = new RecordingParser();
         var index = new MemoryIndex();
@@ -111,7 +111,7 @@ public sealed class DocumentHttpTests
     [InlineData(false, null)]
     public async Task InvalidIndexingInputIsRejectedBeforeReadingOrEmbedding(bool emptyId, string? name)
     {
-        var chat = new ChatHarness();
+        using var chat = new ChatHarness();
         var storage = new MemoryStorage();
         var parser = new RecordingParser();
         var index = new MemoryIndex();
@@ -129,7 +129,7 @@ public sealed class DocumentHttpTests
     [Fact]
     public async Task OversizedDocumentNameIsRejectedBeforeReadingOrEmbedding()
     {
-        var chat = new ChatHarness();
+        using var chat = new ChatHarness();
         var storage = new MemoryStorage();
         var parser = new RecordingParser();
         var index = new MemoryIndex();

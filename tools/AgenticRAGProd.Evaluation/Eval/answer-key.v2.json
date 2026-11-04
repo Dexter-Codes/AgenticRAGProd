@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 2,
+  "datasetVersion": "rag-eval-v2.0",
+  "usage": "Evaluation only. Never ingest or pass to answer generation/query preparation. References may be used by a separate grading model.",
+  "referenceVersions": {
+    "Banking_RAG_Practice.pdf": "NB RAG 2026 02, version 2.0; dated questions may select historical version 1.3.",
+    "kestrel_basin_manual.pdf": "KB-OSM-004, revision 4.2."
+  },
+  "entries": [
+    {
+      "caseId": "case-001",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "Assuming the handbook default of version 2.0, the Horizon Plus AMB requirement is INR 25,000, effective 1 November 2026.",
+      "requiredFacts": [
+        "Required AMB is INR 25,000.",
+        "State the version 2.0/default November schedule assumption and its 1 November 2026 effective date."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            2,
+            7
+          ],
+          "sections": [
+            "1",
+            "6"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "The source explicitly defaults undated questions to version 2.0. Do not substitute the execution date for this documented default.",
+        "Minor wording differences are acceptable if the assumption, amount and effective date are clear."
+      ]
+    },
+    {
+      "caseId": "case-002",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "A salary certificate may replace the latest three salary slips only with approval from the branch operations manager. The income threshold still applies.",
+      "requiredFacts": [
+        "Branch operations manager approval is required.",
+        "The income threshold is not waived."
+      ],
+      "forbiddenClaims": [
+        "Replacement is unconditional.",
+        "Income requirements are waived."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            3
+          ],
+          "sections": [
+            "2"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-003",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "0800-555-0147.",
+      "requiredFacts": [
+        "The number is 0800-555-0147."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "kestrel_basin_manual.pdf",
+          "pageNumbers": [
+            3
+          ],
+          "sections": [
+            "5.5"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "This number belongs to a practice source; it is not real-world emergency guidance.",
+        "Ignore harmless phone-number separators; preserve every digit and the leading zero.",
+        "A value-presence check alone does not prove the full answer is grounded."
+      ]
+    },
+    {
+      "caseId": "case-004",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "clarification",
+      "referenceAnswer": "Which item do you mean?",
+      "requiredFacts": [
+        "Ask the user to identify the missing item or topic.",
+        "Do not guess a product or entity."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [],
+      "gradingNotes": [
+        "No setup turns: this starts a new conversation.",
+        "Any concise, equivalent clarification is acceptable. Sources should be empty."
+      ]
+    },
+    {
+      "caseId": "case-005",
+      "groundTruthStatus": "needs_review",
+      "expectedAnswerKind": null,
+      "referenceAnswer": null,
+      "requiredFacts": [],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            4
+          ],
+          "sections": [
+            "3"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "Preserve the original case and baseline. Do not turn the observed output into ground truth merely to improve scores.",
+        "The source explicitly says Premium does not guarantee approval and states general credit, affordability and verification requirements."
+      ]
+    },
+    {
+      "caseId": "case-006",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "insufficient_evidence",
+      "referenceAnswer": "The supplied document excerpts do not provide enough information.",
+      "requiredFacts": [
+        "No card replacement charge is specified.",
+        "Do not invent a charge or substitute an ATM, onboarding or shortfall fee."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            6
+          ],
+          "sections": [
+            "5"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "Page 6 explicitly lists card replacement charges as unspecified.",
+        "Nonempty retrieved sources are allowed for abstention; unrelated passages do not establish the missing charge.",
+        "Judge the requested amount as unsupported even though the absence itself is documented."
+      ]
+    },
+    {
+      "caseId": "case-007",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "INR 20,000 under historical version 1.3, which applies through 31 October 2026 inclusive.",
+      "requiredFacts": [
+        "Required AMB is INR 20,000.",
+        "Apply version 1.3 to 31 October 2026."
+      ],
+      "forbiddenClaims": [
+        "INR 25,000 applies to this dated application."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            7
+          ],
+          "sections": [
+            "6"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-008",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "INR 25,000 under version 2.0, effective 1 November 2026.",
+      "requiredFacts": [
+        "Required AMB is INR 25,000.",
+        "Apply version 2.0 from 1 November 2026."
+      ],
+      "forbiddenClaims": [
+        "INR 20,000 applies to this dated application."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            2,
+            7
+          ],
+          "sections": [
+            "1",
+            "6"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-009",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "INR 350 plus 18% GST of INR 63, totaling INR 413 once per month.",
+      "requiredFacts": [
+        "Base monthly shortfall fee is INR 350.",
+        "GST is 18%, or INR 63.",
+        "Total is INR 413, charged once per month."
+      ],
+      "forbiddenClaims": [
+        "The charge applies once per day."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            2
+          ],
+          "sections": [
+            "1"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-010",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "Five withdrawals are free; three are chargeable. 3 x INR 20 = INR 60, plus 18% GST of INR 10.80, totaling INR 70.80.",
+      "requiredFacts": [
+        "Five withdrawals are free, so three are chargeable.",
+        "The pre-tax charge is INR 60.",
+        "The total with 18% GST is INR 70.80."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            2
+          ],
+          "sections": [
+            "1"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "Accept equivalent calculation formats; compare currency to two decimal places with tolerance INR 0.01."
+      ]
+    },
+    {
+      "caseId": "case-011",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "(INR 12,000 + INR 20,000) / INR 80,000 x 100 = 40%. This meets the inclusive 45% affordability ceiling, but is not final approval.",
+      "requiredFacts": [
+        "Use debt INR 12,000, proposed EMI INR 20,000 and net income INR 80,000.",
+        "FOIR is 40%, within the inclusive 45% ceiling.",
+        "Passing affordability does not guarantee final approval."
+      ],
+      "forbiddenClaims": [
+        "The loan is finally approved merely because FOIR passes."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            4
+          ],
+          "sections": [
+            "3"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-012",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "INR 12,500.00 + INR 2,499.50 = INR 14,999.50. Pending, Failed and Reversed rows contribute zero; do not subtract the reversed row.",
+      "requiredFacts": [
+        "Include only TX 4101 and TX 4104, whose status is Settled.",
+        "The net settled value is INR 14,999.50.",
+        "Exclude Pending, Failed and Reversed rows without subtracting the reversed amount."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            6
+          ],
+          "sections": [
+            "5"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "Accept equivalent factual explanations; currency tolerance INR 0.01."
+      ]
+    },
+    {
+      "caseId": "case-013",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "Within 4 minutes. Section 5.4 gives KS an explicit exception to the 2-minute default because immersion fluid must first be drained.",
+      "requiredFacts": [
+        "The KS deadline is 4 minutes.",
+        "Recognize the KS site exception rather than applying the general 2-minute deadline."
+      ],
+      "forbiddenClaims": [
+        "The isolation deadline for KS is 2 minutes."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "kestrel_basin_manual.pdf",
+          "pageNumbers": [
+            3
+          ],
+          "sections": [
+            "5.3",
+            "5.4"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-014",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "Warning (A2). At KN, the Warning band begins at 52 degrees Celsius inclusive.",
+      "requiredFacts": [
+        "The band is Warning (A2).",
+        "Exactly 52 degrees Celsius belongs to the band whose lower limit is 52."
+      ],
+      "forbiddenClaims": [
+        "The band is Advisory (A1).",
+        "The band is Critical (A3)."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "kestrel_basin_manual.pdf",
+          "pageNumbers": [
+            2
+          ],
+          "sections": [
+            "4.2"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-015",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "No. Section 7.5 forbids overriding A3 isolation under any circumstances, including for the Director.",
+      "requiredFacts": [
+        "No A3 isolation override is permitted.",
+        "The prohibition applies even to the Director of Operations and in an emergency."
+      ],
+      "forbiddenClaims": [
+        "The Director may override A3 isolation."
+      ],
+      "sourceReferences": [
+        {
+          "documentName": "kestrel_basin_manual.pdf",
+          "pageNumbers": [
+            4
+          ],
+          "sections": [
+            "7.5"
+          ]
+        }
+      ],
+      "gradingNotes": []
+    },
+    {
+      "caseId": "case-016",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "0.25 MWh per rack: 120 / 480 = 200 / 800 = 320 / 1,280 = 0.25.",
+      "requiredFacts": [
+        "Each rack holds 0.25 MWh.",
+        "Use a valid capacity/rack-count pair from the manual in the calculation."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "kestrel_basin_manual.pdf",
+          "pageNumbers": [
+            2
+          ],
+          "sections": [
+            "3"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "250 kWh is an equivalent answer if units and conversion are explicit.",
+        "Do not accept 0.25 kWh or 250 MWh."
+      ]
+    },
+    {
+      "caseId": "case-017",
+      "groundTruthStatus": "verified_source",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "For Horizon Plus under version 2.0, INR 350 plus INR 63 GST totals INR 413 per month.",
+      "requiredFacts": [
+        "Resolve the follow-up to Horizon Plus under version 2.0.",
+        "The total shortfall charge is INR 413 including 18% GST, once per month."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            2
+          ],
+          "sections": [
+            "1"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "Start a fresh conversation for the scenario, then reuse the actual returned conversationId for this target question.",
+        "Capture setup responses, but grade only the target turn. Never use reference answers as conversation setup."
+      ]
+    },
+    {
+      "caseId": "case-018",
+      "groundTruthStatus": "key_only_ocr_unverified",
+      "expectedAnswerKind": "answered",
+      "referenceAnswer": "INR 0 under the page-8 operational notice waiver, applicable in Bengaluru from 1 through 30 November 2026.",
+      "requiredFacts": [
+        "The temporary waiver applies to Horizon Plus assisted onboarding in Bengaluru on 15 November 2026.",
+        "The total charge including GST is INR 0."
+      ],
+      "forbiddenClaims": [],
+      "sourceReferences": [
+        {
+          "documentName": "Banking_RAG_Practice.pdf",
+          "pageNumbers": [
+            2,
+            8
+          ],
+          "sections": [
+            "1",
+            "7"
+          ]
+        }
+      ],
+      "gradingNotes": [
+        "Reference comes from the original answer key; the embedded image has not been independently visually checked in this preparation.",
+        "Enable only after OCR/vision is independently implemented, the image is verified, and fresh evidence is available. Never insert the answer key into ingestion."
+      ]
+    }
+  ]
+}

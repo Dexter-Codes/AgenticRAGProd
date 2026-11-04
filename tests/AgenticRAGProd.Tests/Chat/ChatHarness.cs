@@ -2,19 +2,37 @@ using AgenticRAGProd.Application.Abstractions;
 using AgenticRAGProd.Application.Conversations;
 using AgenticRAGProd.Application.Documents;
 using AgenticRAGProd.Infrastructure.Chunking;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AgenticRAGProd.Tests.Chat;
 
-internal sealed class ChatHarness
+internal sealed class ChatHarness : IDisposable
 {
-    public LocalCosmos Db { get; } = new();
+    public LocalSqlite Db { get; } = new();
+    public void Dispose() => Db.Dispose();
     public Model Model { get; } = new();
     public Embedding Embeddings { get; } = new();
     public Retrieval Retrieval { get; } = new();
     public ChatOptions Options { get; init; } = new() { EnableQueryOptimization = false };
-    public ChatAnswerService Answers => new(Model, Embeddings, Retrieval, new EmbeddingTokenCounter(), Microsoft.Extensions.Options.Options.Create(Options));
-    public ChatService Service => new(Db.Store(), Answers, Microsoft.Extensions.Options.Options.Create(Options), Db.Clock);
-}
+
+    public ChatTelemetry Telemetry { get; } =
+    new(NullLogger<ChatTelemetry>.Instance);
+
+    public ChatAnswerService Answers => new(
+        Model,
+        Embeddings,
+        Retrieval,
+        new EmbeddingTokenCounter(),
+        Microsoft.Extensions.Options.Options.Create(Options),
+        Telemetry);
+
+    public ChatService Service => new(
+        Db.Store(),
+        Answers,
+        Microsoft.Extensions.Options.Options.Create(Options),
+        Db.Clock,
+        Telemetry);
+   }
 
 internal sealed class Model : IAnswerGenerator
 {

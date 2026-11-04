@@ -15,4 +15,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all" />
     <ProjectReference Include="../../src/AgenticRAGProd.Infrastructure/AgenticRAGProd.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../tools/AgenticRAGProd.Evaluation/AgenticRAGProd.Evaluation.csproj" />
+  </ItemGroup>
 </Project>

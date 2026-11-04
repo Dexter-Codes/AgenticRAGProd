@@ -10,26 +10,10 @@ namespace AgenticRAGProd.Tests.Chat;
 
 public sealed class ChatRegistrationTests
 {
-    [Fact]
-    public void ObsoleteSourceContainerSettingDoesNotBlockMessageOnlyChat()
-    {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["CosmosDb:ConnectionString"] = "local-placeholder-only",
-            ["CosmosDb:ContainerName"] = "chat",
-            ["CosmosDb:SourcesContainerName"] = "chat"
-        }).Build();
-        var services = new ServiceCollection().AddLogging().AddInfrastructure(configuration);
-        using var provider = services.BuildServiceProvider();
-        // Old external source settings are ignored; resolving options creates no Azure clients.
-        var options = provider.GetRequiredService<IOptions<CosmosDbOptions>>().Value;
-        Assert.Equal("chat", options.ContainerName);
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void CosmosStartupCredentialsAreRequiredOnlyWhenChatEnabled(bool enabled)
+    public void StartupAndSqliteRegistrationDoNotRequireCosmosCredentials(bool enabled)
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -47,8 +31,9 @@ public sealed class ChatRegistrationTests
         var services = new ServiceCollection().AddLogging().AddApplication().AddInfrastructure(configuration);
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
         var validator = provider.GetRequiredService<IStartupValidator>();
-        // Validation only: no Cosmos/Search/embedding/storage clients are resolved.
-        if (enabled) Assert.Throws<OptionsValidationException>(validator.Validate);
-        else validator.Validate();
+        // No model, search or blob calls are made by validation or store resolution.
+        validator.Validate();
+        Assert.IsType<AgenticRAGProd.Infrastructure.Persistence.SqliteConversationStore>(
+            provider.GetRequiredService<AgenticRAGProd.Application.Abstractions.IConversationStore>());
     }
 }

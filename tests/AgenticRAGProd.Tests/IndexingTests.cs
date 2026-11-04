@@ -69,7 +69,7 @@ public sealed class IndexingTests
     {
         var id = Guid.NewGuid();
         var context = new ChunkContext("Guide", 3, 5, ["Preparation"], ["Uncertain layout"]);
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Retrieval.Chunks = [new RetrievedChunk("passage", id, "Guide", 3, context.Prefix() + "Source content.", false, .8)];
         h.Model.Responses.Enqueue("See [1].");
         var answer = await h.Service.SendAsync(null, "Where is the source?", CancellationToken.None);

@@ -9,7 +9,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "launchUrl": "swagger"
+      "launchUrl": "index.html"
     },
     "https": {
       "commandName": "Project",
@@ -19,7 +19,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "launchUrl": "swagger"
+      "launchUrl": "index.html"
     }
   }
 }

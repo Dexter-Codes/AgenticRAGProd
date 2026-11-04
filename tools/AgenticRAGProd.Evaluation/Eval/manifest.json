@@ -1,0 +1,12 @@
+{
+  "datasetVersion": "rag-eval-v2.0",
+  "files": {
+    "CODEX_PROMPT.md": "9c912a569b839c6b93274e7eb0d44a6c54b4a026f693c032dbff6fac5465c0dc",
+    "README.md": "f6383c6f78d06219a40975c18f2d08dd482c7569346bbd98d488e6e6e4e9ac08",
+    "RUBRIC.md": "1d004711232de2e7049ab1c16968f49e28235fbfca16206a2989792183311d67",
+    "answer-key.v2.json": "929c14cfb78a90b6508a5425288759dee74e4bf7c4a4958643973ff2fe474f12",
+    "baseline/cases.original.json": "9c71201329cc45dc6222926dbdcc6e1d4b43d97b4d3d5d0ecb8def90736e9be5",
+    "baseline/results.original.jsonl": "e3975aab6a746215e0136eb9506d8efa4c9d5892b06d1de33823bab198ffeb69",
+    "cases.v2.json": "abc996265b9415f06c4c84fb93d818d737b74c0f0904d575c7f361246bc64078"
+  }
+}

@@ -6,10 +6,16 @@ public sealed record ChatMessage(string Id, Guid ConversationId, string Email, s
 public sealed record ChatHistoryPage(IReadOnlyList<ChatMessage> Messages, bool HasEarlierMessages);
 
 public sealed record ChatResponse(Guid ConversationId, string MessageId, string Answer,
-    IReadOnlyList<AnswerSource> Sources);
+    IReadOnlyList<AnswerSource> Sources, string AnswerKind);
 
-public sealed record ChatAnswer(string Answer, IReadOnlyList<AnswerSource> Sources);
+public enum ChatAnswerKind
+{
+    Answered,
+    Clarification,
+    InsufficientEvidence
+}
 
+public sealed record ChatAnswer(string Answer, IReadOnlyList<AnswerSource> Sources, ChatAnswerKind Kind);
 public sealed class ConversationNotFoundException() : Exception("Conversation not found.");
 public sealed class ChatInputException(string message) : Exception(message);
 public sealed class ChatGenerationException(string message) : Exception(message);

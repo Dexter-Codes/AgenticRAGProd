@@ -1,0 +1,47 @@
+[
+  {
+    "id": "case-001",
+    "question": "What is the current Horizon Plus AMB requirement?",
+    "expectedAnswerKind": "answered",
+    "expectedFacts": [
+      "INR 25,000 from 1 November 2026."
+    ],
+    "expectedSource": "Page 2, section 1 | Exact lookup"
+  },
+  {
+    "id": "case-002",
+    "question": "Can a salary certificate replace salary slips?",
+    "expectedAnswerKind": "answered",
+    "expectedFacts": [
+      "Only with branch operations manager approval; income threshold remains."
+    ],
+    "expectedSource": "Page 3 | Exception"
+  },
+  {
+    "id": "case-003",
+    "question": "What is the Regional Fire Service phone number?",
+    "expectedAnswerKind": "answered",
+    "expectedFacts": [
+      "0800-555-0147"
+    ],
+    "expectedSource": "5.5"
+  },
+  {
+    "id": "case-004",
+    "question": "What about the other one?",
+    "expectedAnswerKind": "clarification",
+    "expectedFacts": [
+      "Ask which item the user means instead of guessing."
+    ],
+    "expectedSource": "Not applicable: the question lacks a clear reference."
+  },
+  {
+    "id": "case-005",
+    "question": "Does a non-Premium account guarantee a personal loan? ",
+    "expectedAnswerKind": "InsufficientEvidence",
+    "expectedFacts": [
+      "The document does not provide information on personal loan guarantees for non-Premium accounts."
+    ],
+    "expectedSource": "Not applicable: the document does not address this question."
+  }
+]

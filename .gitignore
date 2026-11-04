@@ -5,3 +5,13 @@
 .vs/
 *.user
 *.suo
+
+# Generated evaluation artifacts can contain source passages.
+tools/AgenticRAGProd.Evaluation/Eval/runs/
+
+# Local conversation database and SQLite sidecar files.
+**/App_Data/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal

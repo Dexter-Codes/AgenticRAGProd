@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/apps/" />
+  <Folder Name="/apps/TripConcierge/" />
+  <Folder Name="/apps/TripConcierge/src/">
+    <Project Path="apps/TripConcierge/src/TripConcierge.Api/TripConcierge.Api.csproj" />
+    <Project Path="apps/TripConcierge/src/TripConcierge.Core/TripConcierge.Core.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/AgenticRAGProd.Api/AgenticRAGProd.Api.csproj" />
     <Project Path="src/AgenticRAGProd.Application/AgenticRAGProd.Application.csproj" />
@@ -6,5 +12,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AgenticRAGProd.Tests/AgenticRAGProd.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/AgenticRAGProd.Evaluation/AgenticRAGProd.Evaluation.csproj" />
   </Folder>
 </Solution>

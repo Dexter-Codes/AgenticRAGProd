@@ -13,7 +13,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task InitialQuestionUsesOptimizedTextForBothSearchPathsButKeepsOriginalIntentAndStorage()
     {
-        var h = Enabled();
+        using var h = Enabled();
         const string original = "Could you please explain Policy v2.1 notification requirements within 30 days?";
         const string retrieval = "Policy v2.1 notification requirements within 30 days";
         h.Model.Responses.Enqueue(Plan("Policy v2.1 notification requirements within 30 days?", retrieval));
@@ -39,7 +39,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task FollowupResolutionAndOptimizationShareOneCallAndHistoryNeverBecomesEvidence()
     {
-        var h = Enabled();
+        using var h = Enabled();
         const string original = "How is it calibrated?";
         const string standalone = "How is the pressure sensor calibrated?";
         const string retrieval = "pressure sensor calibration procedure";
@@ -64,7 +64,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task AmbiguousInitialQueryIsClarifiedWithoutEmbeddingSearchOrAnswerGeneration()
     {
-        var h = Enabled();
+        using var h = Enabled();
         h.Model.Responses.Enqueue(Plan(null, null, "Which notification policy do you mean?"));
 
         var result = await h.Service.SendAsync(null, "What about its deadline?", default);
@@ -80,7 +80,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task DisabledOptimizationRetainsDirectFirstQuestionAndExistingFollowupResolver()
     {
-        var h = new ChatHarness();
+        using var h = new ChatHarness();
         h.Model.Responses.Enqueue("First answer [1].");
         var first = await h.Service.SendAsync(null, "  Initial question  ", default);
         Assert.Single(h.Model.Calls);
@@ -109,7 +109,7 @@ public sealed class QueryOptimizationTests
     [InlineData("{\"question\":null,\"retrievalQuestion\":null,\"clarification\":\"Missing question mark\"}")]
     public async Task InvalidPreparationCannotTriggerSearchOrPersistAnExchange(string output)
     {
-        var h = Enabled();
+        using var h = Enabled();
         h.Model.Responses.Enqueue(output);
         await Assert.ThrowsAsync<ChatGenerationException>(() => h.Service.SendAsync(null, "Question", default));
         Assert.Empty(h.Embeddings.Questions);
@@ -123,7 +123,7 @@ public sealed class QueryOptimizationTests
     [InlineData(false)]
     public async Task OversizedPreparedQueriesAreRejected(bool oversizedStandalone)
     {
-        var h = Enabled();
+        using var h = Enabled();
         h.Model.Responses.Enqueue(Plan(oversizedStandalone ? new string('x', 2001) : "Question",
             oversizedStandalone ? "Question" : new string('x', 2001)));
         await Assert.ThrowsAsync<ChatGenerationException>(() => h.Service.SendAsync(null, "Question", default));
@@ -144,7 +144,7 @@ public sealed class QueryOptimizationTests
     [InlineData("What does \"material breach\" mean?", "material breaches meaning")]
     public async Task UnsafeLiteralChangesFallBackToTheCompleteQuestionWithoutAnotherModelCall(string original, string rewrite)
     {
-        var h = Enabled();
+        using var h = Enabled();
         h.Model.Responses.Enqueue(Plan(original, rewrite));
         h.Model.Responses.Enqueue("Supported answer [1].");
         await h.Service.SendAsync(null, original, default);
@@ -156,7 +156,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task SafeRewriteRetainingQuotedTextAndVersionIsUsedForRetrieval()
     {
-        var h = Enabled();
+        using var h = Enabled();
         const string original = "Could you explain \"material breach\" in Policy v2.1?";
         const string retrieval = "Policy v2.1 \"material breach\" definition";
         h.Model.Responses.Enqueue(Plan(original, retrieval));
@@ -169,7 +169,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task LosingAnExplicitFollowupConstraintFailsBeforeRetrieval()
     {
-        var h = Enabled();
+        using var h = Enabled();
         var previous = new ChatMessage("previous", Guid.NewGuid(), "test1@gmail.com", "Describe the policy", "Earlier response [1].", DateTimeOffset.UnixEpoch);
         h.Model.Responses.Enqueue(Plan("What is the policy deadline?", "policy deadline"));
         await Assert.ThrowsAsync<ChatGenerationException>(() => h.Answers.AnswerAsync("What about 30 days?", [previous], default));
@@ -180,7 +180,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task CancellationAfterPreparationStopsBeforeAnyRetrieval()
     {
-        var h = Enabled();
+        using var h = Enabled();
         using var cancellation = new CancellationTokenSource();
         h.Model.Handler = _ =>
         {
@@ -196,7 +196,7 @@ public sealed class QueryOptimizationTests
     [Fact]
     public async Task PreparationProviderFailureStaysAnErrorAndEmptyRetrievalStaysInsufficient()
     {
-        var h = Enabled();
+        using var h = Enabled();
         h.Model.Handler = _ => throw new IOException("Synthetic provider failure");
         await Assert.ThrowsAsync<IOException>(() => h.Service.SendAsync(null, "Question", default));
         Assert.Empty(h.Db.Messages);

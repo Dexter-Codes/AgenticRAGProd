@@ -1,6 +1,6 @@
 using System.Diagnostics;
+using System.ClientModel;
 using Azure;
-using Microsoft.Azure.Cosmos;
 using AgenticRAGProd.Application.Conversations;
 
 namespace AgenticRAGProd.Api;
@@ -31,14 +31,14 @@ internal sealed class ChatExceptionFilter(ILogger<ChatExceptionFilter> logger) :
         catch (OperationCanceledException)
         {
             return Results.Problem(statusCode: 504, title: "Chat operation timed out",
-                detail: "The operation did not complete in time. Inspect saved Cosmos messages before submitting again.");
+                detail: "The operation did not complete in time. Inspect saved chat messages before submitting again.");
         }
         catch (Exception error)
         {
             // Keep provider details and document contents out of responses and logs.
             LogFailure(context.HttpContext, error);
             return Results.Problem(statusCode: 503, title: "Chat operation failed",
-                detail: "The operation could not be confirmed. Inspect saved Cosmos messages before submitting again.");
+                detail: "The operation could not be confirmed. Inspect saved chat messages before submitting again.");
         }
     }
 
@@ -47,7 +47,7 @@ internal sealed class ChatExceptionFilter(ILogger<ChatExceptionFilter> logger) :
         var cause = error.GetBaseException();
         int? providerStatus = cause switch
         {
-            CosmosException cosmos => (int)cosmos.StatusCode,
+            ClientResultException model => model.Status,
             RequestFailedException azure => azure.Status,
             HttpRequestException http when http.StatusCode.HasValue => (int)http.StatusCode.Value,
             _ => null
