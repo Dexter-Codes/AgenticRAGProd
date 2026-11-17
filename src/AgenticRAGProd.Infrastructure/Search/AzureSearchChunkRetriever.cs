@@ -10,10 +10,13 @@ namespace AgenticRAGProd.Infrastructure.Search;
 internal sealed class AzureSearchChunkRetriever(
     SearchClient client,
     IOptions<AzureSearchOptions> options)
-    : ICorpusChunkRetriever
+    : ICorpusChunkRetriever, IChunkRetriever
 {
-    public async Task<IReadOnlyList<RetrievedChunk>> RetrieveCorpusAsync(string question,
-        float[] questionVector, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<RetrievedChunk>> RetrieveCoreAsync(
+    string question,
+    float[] questionVector,
+    Guid? documentId,
+    CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(question);
         ArgumentNullException.ThrowIfNull(questionVector);
@@ -45,6 +48,17 @@ internal sealed class AzureSearchChunkRetriever(
             QueryType = SearchQueryType.Simple,
             VectorSearch = new VectorSearchOptions()
         };
+
+        if (documentId is { } selectedDocumentId)
+        {
+            var documentKey = selectedDocumentId.ToString("N");
+
+            searchOptions.Filter = SearchFilter.Create(
+                $"documentId eq {documentKey}");
+
+            searchOptions.VectorSearch!.FilterMode =
+                VectorFilterMode.PreFilter;
+        }
 
         searchOptions.VectorSearch.Queries.Add(vectorQuery);
 
@@ -100,5 +114,36 @@ internal sealed class AzureSearchChunkRetriever(
         }
 
         return chunks;
+    }
+
+
+    public Task<IReadOnlyList<RetrievedChunk>> RetrieveCorpusAsync(
+    string question,
+    float[] questionVector,
+    CancellationToken cancellationToken) =>
+    RetrieveCoreAsync(
+        question,
+        questionVector,
+        null,
+        cancellationToken);
+
+    public Task<IReadOnlyList<RetrievedChunk>> RetrieveAsync(
+        Guid documentId,
+        string question,
+        float[] questionVector,
+        CancellationToken cancellationToken)
+    {
+        if (documentId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Document ID cannot be empty.",
+                nameof(documentId));
+        }
+
+        return RetrieveCoreAsync(
+            question,
+            questionVector,
+            documentId,
+            cancellationToken);
     }
 }

@@ -8,7 +8,8 @@ public sealed record ItineraryPlanningInput(
     TripRequest Trip,
     DestinationCandidate Destination,
     BudgetBreakdown Budget,
-    WeatherLookup Weather);
+    WeatherLookup Weather,
+    TravelKnowledgeLookup Knowledge);
 
 public sealed record ItineraryDay(
     DateOnly Date,

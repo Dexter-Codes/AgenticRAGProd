@@ -10,6 +10,7 @@ public sealed class TripPlanningWorkflow(
     DestinationSearchClient destinationSearch,
     WeatherClient weatherClient,
     ItineraryPlanner itineraryPlanner,
+    TravelKnowledgeClient travelKnowledge,
     ILogger<TripPlanningWorkflow> logger)
 {
     public async Task<TripDraft> RunAsync(
@@ -101,20 +102,37 @@ public sealed class TripPlanningWorkflow(
             return draft;
         }
 
+        var confirmedDestination = destination.SelectedDestination!;
+
+        logger.LogInformation(
+            "Workflow stage {Stage}", "travel_knowledge");
+
+        var knowledge = await travelKnowledge.SearchAsync(
+            confirmedDestination,
+            token);
+
+        token.ThrowIfCancellationRequested();
+
+        logger.LogInformation(
+            "Travel knowledge completed with status {KnowledgeStatus}",
+            knowledge.Status);
+
         logger.LogInformation(
             "Workflow stage {Stage}", "itinerary_planning");
 
         var handoff = new ItineraryPlanningInput(
             request,
-            destination.SelectedDestination!,
+            confirmedDestination,
             budget,
-            weather);
+            weather,
+            knowledge);
 
         var itinerary = await itineraryPlanner.PlanAsync(handoff, token);
 
         return draft with
         {
-            Itinerary = itinerary
+            Itinerary = itinerary,
+            Knowledge = knowledge
         };
     }
 }

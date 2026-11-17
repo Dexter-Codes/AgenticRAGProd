@@ -129,6 +129,106 @@ public partial class Program
                 .AddEndpointFilter<ChatExceptionFilter>();
         }
 
+        if (app.Environment.IsDevelopment())
+    {
+        app.MapPost(
+            "/api/travel-knowledge/search",
+            async Task<IResult> (
+                TravelKnowledgeRequest? request,
+                DocumentRetrievalService retrieval,
+                IConfiguration configuration,
+                CancellationToken cancellationToken) =>
+            {
+                if (request is null ||
+                    request.DestinationId <= 0 ||
+                    string.IsNullOrWhiteSpace(request.Query) ||
+                    request.Query.Length > 500)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error =
+                            "Provide a positive destination ID " +
+                            "and a query of 1–500 characters."
+                    });
+                }
+
+                var configuredDocument = configuration[
+                    $"TravelKnowledge:Documents:{request.DestinationId}"];
+
+                if (!Guid.TryParse(configuredDocument, out var documentId) ||
+                    documentId == Guid.Empty)
+                {
+                    return Results.Problem(
+                        statusCode: 503,
+                        title: "Travel knowledge is not configured");
+                }
+
+                using var timeout =
+                    CancellationTokenSource.CreateLinkedTokenSource(
+                        cancellationToken);
+
+                timeout.CancelAfter(TimeSpan.FromSeconds(20));
+
+                try
+                {
+                    var chunks = await retrieval.RetrieveAsync(
+                        documentId,
+                        request.Query.Trim(),
+                        timeout.Token);
+
+                    var passages = chunks
+                        .Where(chunk =>
+                            !string.IsNullOrWhiteSpace(chunk.Content))
+                        .Take(5)
+                        .Select(chunk => new
+                        {
+                            chunkId = chunk.Id,
+                            documentId = chunk.DocumentId,
+                            documentName = chunk.DocumentName,
+                            pageNumber = chunk.PageNumber,
+                            passage = chunk.Content.Length > 3000
+                                ? chunk.Content[..3000]
+                                : chunk.Content,
+                            isTruncated = chunk.Content.Length > 3000,
+                            hasUnprocessedImages =
+                                chunk.HasUnprocessedImages,
+                            context = chunk.Context
+                        })
+                        .ToArray();
+
+                    return Results.Ok(new
+                    {
+                        status = passages.Length > 0
+                            ? "retrieved"
+                            : "no_evidence",
+                        destinationId = request.DestinationId,
+                        passages
+                    });
+                }
+                catch (OperationCanceledException)
+                    when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    return Results.Problem(
+                        statusCode: 504,
+                        title: "Travel knowledge retrieval timed out");
+                }
+                catch (Exception exception)
+                {
+                    app.Logger.LogWarning(
+                        "Travel retrieval failed; exception type {ExceptionType}",
+                        exception.GetType().FullName);
+
+                    return Results.Problem(
+                        statusCode: 503,
+                        title: "Travel knowledge is temporarily unavailable");
+                }
+            });
+    }
+
         return app;
     }
 }

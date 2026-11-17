@@ -60,6 +60,14 @@ builder.Services.AddHttpClient<WeatherClient>(client =>
     client.BaseAddress = new Uri("https://api.open-meteo.com/");
     client.Timeout = TimeSpan.FromSeconds(10);
 });
+builder.Services.AddHttpClient<TravelKnowledgeClient>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["RagApi:BaseUrl"]
+        ?? "http://localhost:5080/");
+
+    client.Timeout = TimeSpan.FromSeconds(25);
+});
 builder.Services.AddScoped<TripPlanningWorkflow>();
 var app = builder.Build();
 

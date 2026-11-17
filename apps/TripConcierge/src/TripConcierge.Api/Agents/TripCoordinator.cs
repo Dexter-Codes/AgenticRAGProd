@@ -18,7 +18,8 @@ public sealed record TripDraft(
     BudgetBreakdown? Budget,
     DestinationLookup DestinationLookup,
     WeatherLookup Weather,
-    ItineraryPlan? Itinerary = null);
+    ItineraryPlan? Itinerary = null,
+    TravelKnowledgeLookup? Knowledge = null);
 
 public sealed class TripCoordinator(
     AzureOpenAIClient client,

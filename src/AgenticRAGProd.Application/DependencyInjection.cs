@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddSingleton<ChatTelemetry>();
         services.AddScoped<ChatService>();
         services.AddScoped<ChatAnswerService>();
+        services.AddScoped<DocumentRetrievalService>();
         return services;
     }
 }

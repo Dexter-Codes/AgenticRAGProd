@@ -152,7 +152,13 @@ public static class DependencyInjection
         services.AddScoped<ITextTokenCounter, EmbeddingTokenCounter>();
 
         services.AddScoped<IChunkIndexWriter, AzureSearchChunkIndexWriter>();
-        services.AddScoped<ICorpusChunkRetriever, AzureSearchChunkRetriever>();
+        services.AddScoped<AzureSearchChunkRetriever>();
+
+        services.AddScoped<ICorpusChunkRetriever>(provider =>
+        provider.GetRequiredService<AzureSearchChunkRetriever>());
+
+        services.AddScoped<IChunkRetriever>(provider =>
+        provider.GetRequiredService<AzureSearchChunkRetriever>());
         services.AddScoped<IPageLayoutAnalyzer, PageLayoutAnalyzer>();
         services.AddOptions<ChatOptions>()
             .Bind(configuration.GetSection("Chat"))
