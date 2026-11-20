@@ -4,6 +4,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using TripConcierge.Api.Tools;
+using TripConcierge.Api.Telemetry;
 
 namespace TripConcierge.Api.Agents;
 
@@ -87,9 +88,18 @@ public sealed class ItineraryPlanner(
                     boundedOptions.MaxOutputTokens = 1600;
                     boundedOptions.ResponseFormat = ChatResponseFormat.Json;
 
-                    return await innerClient.GetResponseAsync(
-                        messages,
-                        boundedOptions,
+                    return await TripTelemetry.MeasureAsync(
+                        "model.itinerary",
+                        async () =>
+                        {
+                            var response = await innerClient.GetResponseAsync(
+                                messages,
+                                boundedOptions,
+                                ct);
+
+                            TripTelemetry.RecordModelUsage("ItineraryPlanner", response.Usage);
+                            return response;
+                        },
                         ct);
                 },
                 getStreamingResponseFunc: null)

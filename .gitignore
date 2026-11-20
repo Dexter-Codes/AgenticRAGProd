@@ -15,3 +15,7 @@ tools/AgenticRAGProd.Evaluation/Eval/runs/
 *.db-wal
 *.db-shm
 *.db-journal
+
+# Local browser verification artifacts
+/.playwright-cli/
+/output/playwright/

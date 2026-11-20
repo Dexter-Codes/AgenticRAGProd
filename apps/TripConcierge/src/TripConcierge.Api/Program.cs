@@ -10,6 +10,10 @@ using TripConcierge.Api.Agents;
 using TripConcierge.Api.Tools;
 using TripConcierge.Api.Travel;
 using TripConcierge.Api.Workflows;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using TripConcierge.Api.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -66,10 +70,70 @@ builder.Services.AddHttpClient<TravelKnowledgeClient>(client =>
         builder.Configuration["RagApi:BaseUrl"]
         ?? "http://localhost:5080/");
 
-    client.Timeout = TimeSpan.FromSeconds(25);
+    client.Timeout = TimeSpan.FromSeconds(240);
 });
 builder.Services.AddScoped<TripPlanningWorkflow>();
+builder.Services.AddSingleton<TripRunStore>();
+
+builder.Logging.Configure(options =>
+{
+    options.ActivityTrackingOptions =
+        ActivityTrackingOptions.TraceId |
+        ActivityTrackingOptions.SpanId;
+});
+
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.UseUtcTimestamp = true;
+    options.TimestampFormat = "O";
+});
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource =>
+            resource.AddService("TripConcierge.Api"))
+        .WithTracing(tracing => tracing
+            .SetSampler(new AlwaysOnSampler())
+            .AddSource(TripTelemetry.SourceName)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddConsoleExporter())
+        .WithMetrics(metrics => metrics
+            .AddMeter(TripTelemetry.SourceName)
+            .AddAspNetCoreInstrumentation()
+            .AddView(
+                TripTelemetry.DurationMetricName,
+                new ExplicitBucketHistogramConfiguration
+                {
+                    Boundaries =
+                    [
+                        0.01, 0.05, 0.1, 0.25, 0.5,
+                        1, 2, 5, 10, 20, 30, 60, 120
+                    ]
+                })
+            .AddConsoleExporter((_, readerOptions) =>
+            {
+                readerOptions.PeriodicExportingMetricReaderOptions
+                    .ExportIntervalMilliseconds = 5000;
+            }));
+}
+
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers["X-Trace-Id"] = System.Diagnostics.Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+        await next(context);
+    });
+    app.MapDevelopmentUiEndpoints();
+}
 
 app.MapGet("/", () => Results.Ok(new { service = "TripConcierge.Api", status = "ready" }));
 
@@ -105,6 +169,7 @@ app.MapPost("/api/trips/validate", (TripRequest? request) =>
 
 if (app.Environment.IsDevelopment())
 {
+    app.MapPut("/api/trip-runs/{runId:guid}", TripRunEndpoints.PutAsync);
     app.MapGet("/api/demo/budget", () =>
     {
         var request = new TripRequest(

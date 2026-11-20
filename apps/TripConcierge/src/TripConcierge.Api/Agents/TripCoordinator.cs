@@ -9,6 +9,7 @@ using TripConcierge.Core.Trips;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using TripConcierge.Api.Travel;
+using TripConcierge.Api.Telemetry;
 
 namespace TripConcierge.Api.Agents;
 
@@ -19,7 +20,10 @@ public sealed record TripDraft(
     DestinationLookup DestinationLookup,
     WeatherLookup Weather,
     ItineraryPlan? Itinerary = null,
-    TravelKnowledgeLookup? Knowledge = null);
+    TravelKnowledgeLookup? Knowledge = null)
+    {
+        public BudgetRevision? BudgetRevision { get; init; }
+    }
 
 public sealed class TripCoordinator(
     AzureOpenAIClient client,
@@ -35,12 +39,11 @@ public sealed class TripCoordinator(
     All available travel options are fictional demonstration fixtures.
 
     1. Call GetDemoTravelOptions.
-    2. Choose exactly one transport, lodging and food option.
-    3. Call CalculateBudget using their exact catalog IDs.
-    4. If over budget, evaluate cheaper catalog options.
-    5. Never invent prices, option IDs, availability or tool results.
-    6. Your last successful CalculateBudget call is your submitted selection.
-    7. Finish after evaluating your submitted selection.
+    2. Choose exactly one transport, lodging and food option for the trip.
+    3. Call CalculateBudget with the exact option IDs.
+    4. Finish after the first successful calculation. An over-budget
+    selection is valid and will be reviewed by the workflow.
+    5. Never invent options, prices, availability or tool results.
 
     An over-budget selection is a valid result.
     These options are estimates, not reservations or live quotes.
@@ -87,8 +90,7 @@ public sealed class TripCoordinator(
 
             if (Interlocked.Increment(ref modelCalls) > 6)
             {
-                throw new TripRunException(
-                    "The model-call limit was exceeded.");
+                throw new TripRunException("The model-call limit was exceeded.");
             }
 
             var boundedOptions =
@@ -96,9 +98,18 @@ public sealed class TripCoordinator(
 
             boundedOptions.MaxOutputTokens = 800;
 
-            return await innerClient.GetResponseAsync(
-                messages,
-                boundedOptions,
+            return await TripTelemetry.MeasureAsync(
+                "model.budget",
+                async () =>
+                {
+                    var response = await innerClient.GetResponseAsync(
+                        messages,
+                        boundedOptions,
+                        ct);
+
+                    TripTelemetry.RecordModelUsage("BudgetPlanner", response.Usage);
+                    return response;
+                },
                 ct);
         },
         getStreamingResponseFunc: null)
@@ -135,7 +146,7 @@ public sealed class TripCoordinator(
             throw new TripRunException(
                 "The tool-call limit was exceeded.");
 
-        var ids = tools.LastSelectedIds
+        var ids = tools.InitialSelectedIds
             ?? throw new TripRunException(
                 "The agent did not calculate a valid selection.");
 

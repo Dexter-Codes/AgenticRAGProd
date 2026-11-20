@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Text.Json;
 using TripConcierge.Core.Budgeting;
-using TripConcierge.Core.Common;
 using TripConcierge.Core.Trips;
 using TripConcierge.Api.Travel;
+using TripConcierge.Core.Common;
 
 namespace TripConcierge.Api.Tools;
 
@@ -12,6 +12,7 @@ public sealed class TripTools(
     ILogger logger,
     DestinationSearchClient destinationSearch,
     WeatherClient weatherClient,
+    TripOptionCatalog catalog,
     CancellationToken runToken)
 {
     private sealed record DemoOffer(
@@ -30,33 +31,23 @@ public sealed class TripTools(
             basis,
             "demo-fixture-v1"));
 
-    private static readonly DemoOffer[] Offers =
-    [
-        Offer("transport", "transport-standard",
-            18_000m, CostBasis.PerTraveler),
-
-        Offer("transport", "transport-budget",
-            15_000m, CostBasis.PerTraveler),
-
-        Offer("lodging", "lodging-standard",
-            1_200m, CostBasis.PerTravelerPerNight),
-
-        Offer("lodging", "lodging-budget",
-            800m, CostBasis.PerTravelerPerNight),
-
-        Offer("food", "food-standard",
-            600m, CostBasis.PerTravelerPerDay),
-
-        Offer("food", "food-budget",
-            400m, CostBasis.PerTravelerPerDay)
-    ];
-
+   private readonly DemoOffer[] _offers = catalog.Transport
+    .Select(option => new DemoOffer("transport", option))
+    .Concat(catalog.Lodging.Select(
+        option => new DemoOffer("lodging", option)))
+    .Concat(catalog.Food.Select(
+        option => new DemoOffer("food", option)))
+    .ToArray();
+    
     private int _calls;
     private bool _catalogRead;
 
     public int Calls => Volatile.Read(ref _calls);
 
-    public string[]? LastSelectedIds { get; private set; }
+    private string[]? _initialSelectedIds;
+
+    public string[]? InitialSelectedIds =>
+        Volatile.Read(ref _initialSelectedIds);
 
     private void Enter(string toolName)
     {
@@ -82,7 +73,8 @@ public sealed class TripTools(
         Enter(nameof(GetDemoTravelOptions));
         _catalogRead = true;
 
-        return JsonSerializer.Serialize(Offers.Select(offer => new
+       // In GetDemoTravelOptions:
+        return JsonSerializer.Serialize(_offers.Select(offer => new
         {
             offer.Category,
             offer.Option.Id,
@@ -110,7 +102,14 @@ public sealed class TripTools(
         var selected = ResolveSelection(optionIds);
         var result = BudgetCalculator.Calculate(trip, selected);
 
-        LastSelectedIds = optionIds.ToArray();
+       if (Interlocked.CompareExchange(
+        ref _initialSelectedIds,
+        optionIds.ToArray(),
+        null) is not null)
+        {
+            throw new TripRunException(
+                "An initial budget selection has already been submitted.");
+        }
 
         return result;
     }
@@ -126,8 +125,9 @@ public sealed class TripTools(
                 "Select exactly three distinct option IDs.");
         }
 
+      // In ResolveSelection:
         var selected = ids.Select(id =>
-            Offers.FirstOrDefault(offer => offer.Option.Id == id)
+            _offers.FirstOrDefault(offer => offer.Option.Id == id)
             ?? throw new TripRunException(
                 "An unknown option ID was selected."))
             .ToArray();
@@ -149,7 +149,7 @@ public sealed class TripTools(
     "Look up the trip destination and validate the user's selected " +
     "destination ID against the returned candidates. " +
     "Never choose a destination on the user's behalf.")]
-    public async Task<DestinationLookup> LookupDestination()
+    public async Task<DestinationLookup> LookupDestination(DestinationLookup? savedDestination = null)
     {
         Enter(nameof(LookupDestination));
 
@@ -158,9 +158,9 @@ public sealed class TripTools(
             return existing;
         }
 
-        var result = await destinationSearch.SearchAsync(
-            trip.Destination,
-            runToken);
+       var result = savedDestination is { } saved
+    ? saved with { Status = "candidates_found" }
+    : await destinationSearch.SearchAsync(trip.Destination, runToken);
 
         if (result.Status == "candidates_found")
         {
@@ -231,6 +231,23 @@ public sealed class TripTools(
 
         LastWeatherLookup = result;
         return result;
+    }
+
+    public void RestoreWeather(WeatherLookup weather)
+    {
+        runToken.ThrowIfCancellationRequested();
+
+        var destinationId =
+            LastDestinationLookup?.SelectedDestination?.Id;
+
+        if (destinationId is null ||
+            weather.DestinationId != destinationId)
+        {
+            throw new TripRunException(
+                "Saved weather does not match the confirmed destination.");
+        }
+
+        LastWeatherLookup = weather;
     }
 
 }

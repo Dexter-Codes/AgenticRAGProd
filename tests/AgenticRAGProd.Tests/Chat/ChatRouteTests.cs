@@ -16,8 +16,8 @@ namespace AgenticRAGProd.Tests.Chat;
 public sealed class ChatRouteTests
 {
     [Theory]
-    [InlineData("Development", true, 3)]
-    [InlineData("Development", false, 2)]
+    [InlineData("Development", true, 6)]
+    [InlineData("Development", false, 5)]
     [InlineData("Production", false, 2)]
     [InlineData("Staging", false, 2)]
     public async Task ApplicationExposesUploadAndIndexingAndGatesChatOnDevelopmentAndLocalMode(string environment, bool enabled, int count)
@@ -28,9 +28,22 @@ public sealed class ChatRouteTests
         Assert.Equal(count, endpoints.Length);
         Assert.Contains(endpoints, endpoint => endpoint.RoutePattern.RawText == "/api/documents");
         Assert.Contains(endpoints, endpoint => endpoint.RoutePattern.RawText == "/api/documents/{documentId:guid}/index");
-        Assert.All(endpoints, endpoint =>
+        Assert.All(endpoints.Where(endpoint => endpoint.RoutePattern.RawText?.TrimEnd('/') != "/mcp" && endpoint.RoutePattern.RawText != "/api/local/capabilities"), endpoint =>
             Assert.Equal("POST", Assert.Single(endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods)));
-        if (count == 2)
+        if (environment == "Development")
+        {
+            Assert.Contains(endpoints, endpoint => endpoint.RoutePattern.RawText == "/api/travel-knowledge/search");
+            var capabilities = endpoints.Single(endpoint => endpoint.RoutePattern.RawText == "/api/local/capabilities");
+            Assert.Equal("GET", Assert.Single(capabilities.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods));
+            Assert.Contains(endpoints, endpoint => endpoint.RoutePattern.RawText?.TrimEnd('/') == "/mcp");
+        }
+        else
+        {
+            Assert.DoesNotContain(endpoints, endpoint => endpoint.RoutePattern.RawText == "/api/local/capabilities");
+            Assert.DoesNotContain(endpoints, endpoint => endpoint.RoutePattern.RawText == "/api/travel-knowledge/search");
+            Assert.DoesNotContain(endpoints, endpoint => endpoint.RoutePattern.RawText?.TrimEnd('/') == "/mcp");
+        }
+        if (environment != "Development" || !enabled)
         {
             Assert.DoesNotContain(endpoints, endpoint => endpoint.RoutePattern.RawText == "/api/chat");
             return;

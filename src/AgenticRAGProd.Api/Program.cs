@@ -9,6 +9,10 @@ using AgenticRAGProd.Infrastructure;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
+using AgenticRAGProd.Api.Travel;
+using ModelContextProtocol.AspNetCore;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsDevelopment())
@@ -57,6 +61,10 @@ builder.Services.AddApiDocumentation();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+
+
+
+
 var app = Program.CreateApp(builder);
 app.Run();
 
@@ -67,6 +75,14 @@ public partial class Program
         var localChatEnabled = builder.Configuration.GetValue<bool>("Chat:LocalSingleUserMode");
         if (localChatEnabled && !builder.Environment.IsDevelopment())
             throw new InvalidOperationException("Local single-user chat is supported only in Development.");
+
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddScoped<TravelKnowledgeService>();
+            builder.Services.AddMcpServer()
+                .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+                .WithTools<TravelKnowledgeTools>();
+        }
 
         var app = builder.Build();
         app.UseExceptionHandler(new ExceptionHandlerOptions
@@ -129,103 +145,40 @@ public partial class Program
                 .AddEndpointFilter<ChatExceptionFilter>();
         }
 
-        if (app.Environment.IsDevelopment())
+    if (app.Environment.IsDevelopment())
     {
+        app.MapGet("/api/local/capabilities", () => Results.Ok(new { chatEnabled = localChatEnabled }));
+        app.MapMcp("/mcp").RequireHost("localhost", "127.0.0.1");
+
         app.MapPost(
             "/api/travel-knowledge/search",
             async Task<IResult> (
                 TravelKnowledgeRequest? request,
-                DocumentRetrievalService retrieval,
-                IConfiguration configuration,
+                TravelKnowledgeService search,
                 CancellationToken cancellationToken) =>
             {
-                if (request is null ||
-                    request.DestinationId <= 0 ||
-                    string.IsNullOrWhiteSpace(request.Query) ||
-                    request.Query.Length > 500)
+                var result = await search.SearchAsync(
+                    request?.DestinationId ?? 0,
+                    request?.Query,
+                    cancellationToken);
+
+                return result.Status switch
                 {
-                    return Results.BadRequest(new
+                    "retrieved" or "no_evidence" => Results.Ok(result),
+                    "invalid_request" => Results.BadRequest(new
                     {
-                        error =
-                            "Provide a positive destination ID " +
-                            "and a query of 1–500 characters."
-                    });
-                }
-
-                var configuredDocument = configuration[
-                    $"TravelKnowledge:Documents:{request.DestinationId}"];
-
-                if (!Guid.TryParse(configuredDocument, out var documentId) ||
-                    documentId == Guid.Empty)
-                {
-                    return Results.Problem(
+                        error = "Provide a positive destination ID and a query of 1–500 characters."
+                    }),
+                    "not_configured" => Results.Problem(
                         statusCode: 503,
-                        title: "Travel knowledge is not configured");
-                }
-
-                using var timeout =
-                    CancellationTokenSource.CreateLinkedTokenSource(
-                        cancellationToken);
-
-                timeout.CancelAfter(TimeSpan.FromSeconds(20));
-
-                try
-                {
-                    var chunks = await retrieval.RetrieveAsync(
-                        documentId,
-                        request.Query.Trim(),
-                        timeout.Token);
-
-                    var passages = chunks
-                        .Where(chunk =>
-                            !string.IsNullOrWhiteSpace(chunk.Content))
-                        .Take(5)
-                        .Select(chunk => new
-                        {
-                            chunkId = chunk.Id,
-                            documentId = chunk.DocumentId,
-                            documentName = chunk.DocumentName,
-                            pageNumber = chunk.PageNumber,
-                            passage = chunk.Content.Length > 3000
-                                ? chunk.Content[..3000]
-                                : chunk.Content,
-                            isTruncated = chunk.Content.Length > 3000,
-                            hasUnprocessedImages =
-                                chunk.HasUnprocessedImages,
-                            context = chunk.Context
-                        })
-                        .ToArray();
-
-                    return Results.Ok(new
-                    {
-                        status = passages.Length > 0
-                            ? "retrieved"
-                            : "no_evidence",
-                        destinationId = request.DestinationId,
-                        passages
-                    });
-                }
-                catch (OperationCanceledException)
-                    when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (OperationCanceledException)
-                {
-                    return Results.Problem(
+                        title: "Travel knowledge is not configured"),
+                    "timed_out" => Results.Problem(
                         statusCode: 504,
-                        title: "Travel knowledge retrieval timed out");
-                }
-                catch (Exception exception)
-                {
-                    app.Logger.LogWarning(
-                        "Travel retrieval failed; exception type {ExceptionType}",
-                        exception.GetType().FullName);
-
-                    return Results.Problem(
+                        title: "Travel knowledge retrieval timed out"),
+                    _ => Results.Problem(
                         statusCode: 503,
-                        title: "Travel knowledge is temporarily unavailable");
-                }
+                        title: "Travel knowledge is temporarily unavailable")
+                };
             });
     }
 

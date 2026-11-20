@@ -45,7 +45,9 @@ public sealed class SwaggerTests
         Assert.Contains("Swagger UI", ui.Body);
         using var json = JsonDocument.Parse(document.Body);
         var paths = json.RootElement.GetProperty("paths");
-        Assert.Equal(chat ? 3 : 2, paths.EnumerateObject().Count());
+        Assert.Equal(chat ? 5 : 4, paths.EnumerateObject().Count());
+        Assert.True(paths.GetProperty("/api/local/capabilities").TryGetProperty("get", out _));
+        Assert.True(paths.GetProperty("/api/travel-knowledge/search").TryGetProperty("post", out _));
         var upload = paths.GetProperty("/api/documents").GetProperty("post");
         Assert.True(upload.GetProperty("requestBody").GetProperty("content").TryGetProperty("multipart/form-data", out _));
         var indexing = paths.GetProperty("/api/documents/{documentId}/index").GetProperty("post");

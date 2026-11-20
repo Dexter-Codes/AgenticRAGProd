@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23126b60%27/%3E%3Cpath d=%27M16 5L27 16 16 27 5 16Z%27 fill=%27none%27 stroke=%27white%27 stroke-width=%272%27/%3E%3C/svg%3E"
+    />
+    <title>TripConcierge · Your next chapter</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="#plan"
+        ><span class="logo">◈</span> TripConcierge</a
+      >
+      <p class="eyebrow">YOUR TRAVEL WORKSPACE</p>
+      <nav aria-label="Main navigation">
+        <a href="#plan">◷ <span>Plan a trip</span></a
+        ><a href="#runs">▤ <span>Saved runs</span></a
+        ><a href="#knowledge">▧ <span>Knowledge & chat</span></a
+        ><a href="#retrieval">⌕ <span>Retrieval & MCP</span></a
+        ><a href="#explorer">⌘ <span>API explorer</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <span class="pill">Local development</span>
+        <p>Thoughtful plans.<br />Transparent sources.</p>
+        <small>TripConcierge + AgenticRAG</small>
+      </div>
+    </aside>
+    <div class="shell">
+      <header>
+        <span
+          >Workspace <span class="muted">/</span>
+          <span id="breadcrumb">Plan a trip</span></span
+        ><span class="pill">Development · localhost</span>
+      </header>
+      <main id="main">
+        <section data-view="plan">
+          <div class="heading">
+            <div>
+              <p class="eyebrow">A LITTLE CURIOSITY GOES A LONG WAY</p>
+              <h1>Where to next?</h1>
+              <p class="muted">
+                Turn your next idea into a considered travel plan.
+              </p>
+            </div>
+            <span class="compass" aria-hidden="true">✳</span>
+          </div>
+          <div class="notice">
+            A planning sandbox, with real source inspection. Transport, lodging
+            and food prices are fictional demo fixtures, not live quotes or
+            bookings.
+          </div>
+          <div class="planning-grid">
+            <article class="card">
+              <div class="card-heading">
+                <h2>Your trip, your way</h2>
+                <span class="pill">INR</span>
+              </div>
+              <form id="trip-form">
+                <div class="two">
+                  <label
+                    >From<input
+                      name="origin"
+                      value="Bengaluru"
+                      required
+                      autocomplete="off" /></label
+                  ><label
+                    >To<input
+                      name="destination"
+                      value="Hanoi"
+                      required
+                      autocomplete="off" /></label
+                  ><label
+                    >Departure<input
+                      name="departureDate"
+                      type="date"
+                      required /></label
+                  ><label
+                    >Return<input
+                      name="returnDate"
+                      type="date"
+                      required /></label
+                  ><label
+                    >Travelers<input
+                      name="travelerCount"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value="2"
+                      required /></label
+                  ><label
+                    >Travel style<select name="style">
+                      <option value="backpacking">Backpacking</option>
+                      <option value="comfort">Comfort</option>
+                      <option value="luxury">Luxury</option>
+                    </select></label
+                  >
+                </div>
+                <label
+                  >Total budget · INR<input
+                    name="budget"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value="60000"
+                    required
+                /></label>
+                <p class="hint">
+                  Same-day trips are allowed. Outlines support 1–7 days;
+                  forecasts cover only the provider’s available window. Past
+                  dates are accepted by the API.
+                </p>
+                <div class="actions">
+                  <button type="button" id="validate" class="secondary">
+                    Validate inputs</button
+                  ><button type="submit">Start planning</button>
+                </div>
+              </form>
+              <div id="plan-message" role="status" aria-live="polite"></div>
+            </article>
+            <aside class="card journey">
+              <p class="eyebrow">FROM IDEA TO ITINERARY</p>
+              <h2>A plan you can look into.</h2>
+              <p class="muted">
+                Confirm the right destination, explore the budget, then inspect
+                the evidence behind your trip.
+              </p>
+              <ol>
+                <li>Find your destination</li>
+                <li>Check weather & demo budget</li>
+                <li>Retrieve guide passages</li>
+                <li>Build a daily outline</li>
+              </ol>
+              <p class="hint">
+                Model calls happen only after your explicit action. No automatic
+                planning retries.
+              </p>
+            </aside>
+          </div>
+          <div id="run-panel"></div>
+        </section>
+        <section data-view="runs" hidden>
+          <div class="heading">
+            <div>
+              <p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p>
+              <h1>Saved runs</h1>
+              <p class="muted">Reopen a SQLite checkpoint by its run ID.</p>
+            </div>
+          </div>
+          <article class="card">
+            <form id="open-run" class="inline">
+              <label
+                >Run ID<input
+                  name="runId"
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  required /></label
+              ><button>Open run</button>
+            </form>
+            <p class="hint">
+              Opening and restoring only reads saved state. Continue planning
+              with an explicit action on the trip page.
+            </p>
+            <div id="run-message" role="status"></div>
+            <div id="recent-runs"></div>
+          </article>
+        </section>
+        <section data-view="knowledge" hidden>
+          <div class="heading">
+            <div>
+              <p class="eyebrow">GIVE YOUR PLANS SOME CONTEXT</p>
+              <h1>Knowledge & chat</h1>
+              <p class="muted">
+                Upload a guide, index its passages, and ask your corpus.
+              </p>
+            </div>
+          </div>
+          <div class="two columns">
+            <article class="card">
+              <h2>Build your library</h2>
+              <form id="upload-form">
+                <label
+                  >PDF document · up to 10 MB<input
+                    type="file"
+                    name="file"
+                    accept=".pdf,application/pdf"
+                    required /></label
+                ><button>Upload PDF</button>
+              </form>
+              <div id="upload-result" role="status"></div>
+              <hr />
+              <form id="index-form">
+                <label>Document ID<input name="documentId" required /></label
+                ><label
+                  >Document name<input
+                    name="documentName"
+                    maxlength="255"
+                    required /></label
+                ><button>Index document · embeddings</button>
+              </form>
+              <div id="index-result" role="status"></div>
+              <p class="notice">
+                After indexing, configure
+                <code>TravelKnowledge:Documents:{destinationId}</code> with this
+                document ID in the RAG backend, then restart it. Uploading alone
+                does not link a guide to a destination.
+              </p>
+            </article>
+            <article class="card">
+              <h2>Ask your guides</h2>
+              <p id="chat-availability" class="notice" role="status">
+                Checking local chat availability…
+              </p>
+              <label
+                >Conversation ID (blank starts a conversation)<input
+                  id="conversation-id"
+                  placeholder="New conversation"
+              /></label>
+              <div id="chat-messages" aria-live="polite"></div>
+              <form id="chat-form">
+                <label
+                  >Your question<textarea
+                    name="query"
+                    required
+                    maxlength="2000"
+                    placeholder="What should I know before visiting?"
+                  ></textarea></label
+                ><button id="chat-send" disabled>
+                  Send question · models + embeddings
+                </button>
+              </form>
+              <p class="hint">
+                Completed exchanges live in RAG SQLite. Source passages are
+                retained here only in this browser session; there is no
+                chat-history API. An uncertain failure may already have saved an
+                exchange.
+              </p>
+            </article>
+          </div>
+        </section>
+        <section data-view="retrieval" hidden>
+          <div class="heading">
+            <div>
+              <p class="eyebrow">FOLLOW THE EVIDENCE</p>
+              <h1>Retrieval & MCP</h1>
+              <p class="muted">
+                Inspect the same configured guide over HTTP or the MCP SDK.
+              </p>
+            </div>
+          </div>
+          <article class="card">
+            <form id="retrieval-form">
+              <div class="two">
+                <label
+                  >Destination ID<input
+                    name="destinationId"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    placeholder="Open-Meteo destination ID" /></label
+                ><label
+                  >Transport<select name="transport">
+                    <option value="http">HTTP search</option>
+                    <option value="mcp">MCP tool call</option>
+                  </select></label
+                >
+              </div>
+              <label
+                >Search query<textarea
+                  name="query"
+                  maxlength="500"
+                  required
+                  placeholder="Visitor attractions, names and descriptions"
+                ></textarea></label
+              ><button>Retrieve passages · embeddings</button>
+            </form>
+            <div id="retrieval-result" role="status"></div>
+          </article>
+          <article class="card">
+            <div class="card-heading">
+              <div>
+                <h2>MCP tool discovery</h2>
+                <p class="muted">
+                  Names, descriptions and input schemas from the connected
+                  server.
+                </p>
+              </div>
+              <button id="discover" class="secondary">Discover tools</button>
+            </div>
+            <div id="tools-result" role="status"></div>
+          </article>
+        </section>
+        <section data-view="explorer" hidden>
+          <div class="heading">
+            <div>
+              <p class="eyebrow">UNDER THE HOOD</p>
+              <h1>API explorer</h1>
+              <p class="muted">
+                Actual routes. Explicit calls. Inspectable responses.
+              </p>
+            </div>
+          </div>
+          <div class="notice">
+            OpenTelemetry traces and metrics are exported to the .NET process
+            consoles in Development. There is no telemetry query API or chart
+            data source. Request timings below are measured in this browser.
+          </div>
+          <article class="card">
+            <form id="explorer-form">
+              <label>Operation<select id="operation"></select></label>
+              <p id="operation-note" class="hint"></p>
+              <label id="path-label"
+                >Run / document ID<input
+                  id="path-id"
+                  placeholder="GUID" /></label
+              ><label id="document-name-label" hidden
+                >Document name<input
+                  id="explorer-document-name"
+                  maxlength="255" /></label
+              ><label id="json-label"
+                >JSON inputs<textarea
+                  id="request-json"
+                  rows="10"
+                  spellcheck="false"
+                ></textarea></label
+              ><button>Execute once</button>
+            </form>
+            <div id="explorer-result" role="status"></div>
+          </article>
+          <article class="card">
+            <h2>Request activity</h2>
+            <p class="hint">
+              Latest 30 requests in this tab. Full responses may contain
+              document passages.
+            </p>
+            <div id="activity"></div>
+          </article>
+        </section>
+      </main>
+      <footer>
+        Made for exploring. Built for inspection.
+        <span>Local development workspace</span>
+      </footer>
+    </div>
+    <dialog id="source-dialog">
+      <div class="card-heading">
+        <h2>Source passage</h2>
+        <button id="close-source" class="secondary">Close</button>
+      </div>
+      <div id="source-content"></div>
+    </dialog>
+  </body>
+</html>
